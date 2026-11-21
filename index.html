@@ -7763,39 +7763,68 @@ function mobileTeacherStudentPage(studentId){
 }
 
 // V2.37 : tableau récapitulatif des notes (lecture seule).
+// V2.38 — Notes par semestre, évaluations notées uniquement.
 let teacherNotesSelectedClass=null;
+function teacherNotesSemesterAssignment(classId,evalId){
+ const assignment=(data.teacherNotesSemesters||{})[JSON.stringify([classId,evalId])];
+ return assignment===2?2:1;
+}
 function teacherNotesPage(allowedClassIds){
  const classes=data.classes.filter(c=>!c.archived&&allowedClassIds.includes(c.id))
-   .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'fr'));
- if(!classes.length){shell(title('Notes','Tableau récapitulatif par classe')+'<div class="card">Aucune classe affectée à ce professeur.</div>');return}
+  .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'fr'));
+ if(!classes.length){shell(title('Notes','Tableau par classe')+'<div class="card">Aucune classe affectée.</div>');return}
  if(!classes.some(c=>c.id===teacherNotesSelectedClass))teacherNotesSelectedClass=classes[0].id;
  const chosen=classes.find(c=>c.id===teacherNotesSelectedClass);
- const refKey=classReferentialKey(chosen);
  const pupils=data.students.filter(st=>!st.archived&&st.classId===chosen.id)
-   .sort((a,b)=>String(a.last||'').localeCompare(String(b.last||''),'fr')||String(a.first||'').localeCompare(String(b.first||''),'fr'));
+  .sort((a,b)=>String(a.last||'').localeCompare(String(b.last||''),'fr')||String(a.first||'').localeCompare(String(b.first||''),'fr'));
  const pupilIds=new Set(pupils.map(st=>st.id));
  const resultIds=new Set((data.results||[]).filter(r=>pupilIds.has(r.student)).map(r=>r.eval));
- const manualIds=new Set((data.evalGrades||[]).filter(g=>pupilIds.has(g.studentId)).map(g=>g.evalId));
- const assessments=data.evals.filter(ev=>
-   evalReferentialKey(ev)===refKey &&
-   ((ev.classes||[]).includes(chosen.id)||resultIds.has(ev.id)||manualIds.has(ev.id))
- ).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''),'fr')||String(a.title||'').localeCompare(String(b.title||''),'fr'));
- const gradeCell=(st,ev)=>{
-   const g=effectiveEvalGrade(ev.id,st.id);
-   return g===null||g===undefined?'<span class="muted" title="Aucune note enregistrée">—</span>':
-     `<span title="${esc(evalGradeSourceLabel(ev.id,st.id))}">${esc(formatGrade(g))}</span>`;
+ const gradeIds=new Set((data.evalGrades||[]).filter(g=>pupilIds.has(g.studentId)).map(g=>g.evalId));
+ const refKey=classReferentialKey(chosen);
+ const candidates=data.evals.filter(ev=>evalReferentialKey(ev)===refKey&&
+   ((ev.classes||[]).includes(chosen.id)||resultIds.has(ev.id)||gradeIds.has(ev.id)))
+  .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''),'fr')||String(a.title||'').localeCompare(String(b.title||''),'fr'));
+ const valid=n=>n!==null&&n!==undefined&&Number.isFinite(Number(n));
+ const grades=new Map(candidates.map(ev=>[ev.id,new Map(pupils.map(st=>[st.id,effectiveEvalGrade(ev.id,st.id)]))]));
+ const assessments=candidates.filter(ev=>pupils.some(st=>valid(grades.get(ev.id).get(st.id))));
+ const semester=ev=>teacherNotesSemesterAssignment(chosen.id,ev.id);
+ const ordered=[...assessments.filter(ev=>semester(ev)===1),...assessments.filter(ev=>semester(ev)===2)];
+ const grade=(st,ev)=>grades.get(ev.id).get(st.id);
+ const cell=(st,ev)=>{
+  const value=grade(st,ev);
+  return valid(value)?'<span title="'+esc(evalGradeSourceLabel(ev.id,st.id))+'">'+esc(formatGrade(value))+'</span>':'<span class="muted">—</span>';
  };
- const mean=st=>{
-   const arr=assessments.map(ev=>effectiveEvalGrade(ev.id,st.id)).filter(n=>n!==null&&n!==undefined&&Number.isFinite(Number(n)));
-   return arr.length?(arr.reduce((x,n)=>x+Number(n),0)/arr.length).toLocaleString('fr-FR',{maximumFractionDigits:2})+' / 20':'—';
+ const mean=(st,sem)=>{
+  const values=assessments.filter(ev=>semester(ev)===sem).map(ev=>grade(st,ev)).filter(valid).map(Number);
+  return values.length?(values.reduce((a,b)=>a+b,0)/values.length).toLocaleString('fr-FR',{maximumFractionDigits:2})+' / 20':'—';
  };
+ const headings=ordered.map(ev=>'<th style="min-width:155px;padding:10px;background:var(--panel);position:sticky;top:0">'+
+  esc(ev.title||'Évaluation')+'<div class="muted small">'+esc(ev.date||'')+'</div>'+
+  '<label class="muted small">Semestre <select class="input" style="padding:3px" data-notes-semester="'+esc(ev.id)+'" aria-label="Semestre de '+esc(ev.title||'Évaluation')+'">'+
+  '<option value="1"'+(semester(ev)===1?' selected':'')+'>1</option><option value="2"'+(semester(ev)===2?' selected':'')+'>2</option></select></label></th>').join('');
  const table=assessments.length?
-   `<div style="overflow:auto;max-width:100%;border:1px solid var(--line);border-radius:10px"><table style="width:100%;border-collapse:separate;border-spacing:0;min-width:650px"><thead><tr><th style="position:sticky;left:0;top:0;background:var(--panel);z-index:3;min-width:180px;padding:10px;text-align:left">Élève</th>${assessments.map(ev=>`<th style="position:sticky;top:0;background:var(--panel);min-width:125px;padding:10px;text-align:center" title="${esc(ev.title||'Évaluation')}">${esc(ev.title||'Évaluation')}<div class="muted small">${esc(ev.date||'')}</div></th>`).join('')}<th style="position:sticky;top:0;background:var(--panel);padding:10px">Moyenne</th></tr></thead><tbody>${pupils.map(st=>`<tr><th style="position:sticky;left:0;background:var(--panel);padding:10px;text-align:left;white-space:nowrap">${esc(st.last||'')} ${esc(st.first||'')}</th>${assessments.map(ev=>`<td style="padding:10px;text-align:center;border-top:1px solid var(--line)">${gradeCell(st,ev)}</td>`).join('')}<td style="padding:10px;text-align:center;border-top:1px solid var(--line);font-weight:700">${mean(st)}</td></tr>`).join('')}</tbody></table></div>`:
-   '<div class="card muted">Aucune évaluation associée à cette classe pour le moment.</div>';
- shell(title('Notes','Notes des élèves, par classe et par évaluation')+
-   `<div class="card" style="margin-bottom:14px"><label for="teacherNotesClass">Classe</label> <select id="teacherNotesClass" class="input" style="max-width:350px">${classes.map(c=>`<option value="${esc(c.id)}" ${c.id===chosen.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select><p class="muted small">${pupils.length} élève(s) · ${assessments.length} évaluation(s) · Notes sur 20 issues des évaluations enregistrées. « — » signifie qu'aucune note n'est disponible. La moyenne porte uniquement sur les notes disponibles.</p></div>`+table);
+  '<div style="overflow:auto;max-width:100%;border:1px solid var(--line);border-radius:10px"><table style="width:100%;border-spacing:0;min-width:650px"><thead><tr>'+
+  '<th style="position:sticky;left:0;top:0;background:var(--panel);min-width:180px;padding:10px;z-index:3">Élève</th>'+headings+
+  '<th style="background:var(--panel);padding:10px">Moy. S1</th><th style="background:var(--panel);padding:10px">Moy. S2</th></tr></thead><tbody>'+
+  pupils.map(st=>'<tr><th style="position:sticky;left:0;background:var(--panel);text-align:left;padding:10px">'+esc(st.last||'')+' '+esc(st.first||'')+'</th>'+
+  ordered.map(ev=>'<td style="text-align:center;padding:10px;border-top:1px solid var(--line)">'+cell(st,ev)+'</td>').join('')+
+  '<td style="text-align:center;padding:10px;font-weight:700">'+mean(st,1)+'</td><td style="text-align:center;padding:10px;font-weight:700">'+mean(st,2)+'</td></tr>').join('')+
+  '</tbody></table></div>':
+  '<div class="card muted">Aucune note pour cette classe. Les évaluations apparaîtront dès qu’un élève aura une note.</div>';
+ shell(title('Notes','Récapitulatif semestriel par classe')+
+  '<div class="card" style="margin-bottom:14px"><label for="teacherNotesClass">Classe</label> <select id="teacherNotesClass" class="input">'+
+  classes.map(c=>'<option value="'+esc(c.id)+'"'+(c.id===chosen.id?' selected':'')+'>'+esc(c.name)+'</option>').join('')+
+  '</select><p class="muted small">'+pupils.length+' élève(s) · '+assessments.length+' évaluation(s) notée(s). Choisissez le semestre sous chaque évaluation. Les notes existantes ne sont pas modifiées.</p></div>'+table);
  const select=document.getElementById('teacherNotesClass');
  if(select)select.onchange=()=>{teacherNotesSelectedClass=select.value;teacherNotesPage(allowedClassIds)};
+ document.querySelectorAll('[data-notes-semester]').forEach(input=>input.onchange=()=>{
+  const evalId=input.dataset.notesSemester;
+  if(!assessments.some(ev=>ev.id===evalId))return;
+  data.teacherNotesSemesters=data.teacherNotesSemesters||{};
+  data.teacherNotesSemesters[JSON.stringify([chosen.id,evalId])]=input.value==='2'?2:1;
+  if(save()===false){alert('Impossible d’enregistrer le semestre.');return}
+  teacherNotesPage(allowedClassIds);
+ });
 }
 
 function teacher(){
