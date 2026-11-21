@@ -12,12 +12,12 @@ start=source.index('function teacherNotesPage(')
 end=source.index('\nfunction teacher(){',start)
 s=source[start:end]
 
-def change(old,new):
+def change(old,new,expected=1):
     global s
     n=s.count(old)
-    if n!=1:
+    if n!=expected:
         raise RuntimeError(f'V2.41: motif ambigu ou absent ({n}) : {old[:100]}')
-    s=s.replace(old,new,1)
+    s=s.replace(old,new,expected)
 
 # Affichage compact des notes, sans suffixe /20 (moyennes inchangées).
 change("esc(formatGrade(n))","esc(Number(n).toLocaleString('fr-FR',{maximumFractionDigits:2}))")
@@ -52,7 +52,7 @@ change("""'<td style="text-align:center;padding:8px;font-weight:700">'+mean(st,l
    '<td style="position:sticky;right:74px;background:var(--panel);text-align:center;padding:4px;font-weight:700;z-index:2;width:74px;min-width:74px;max-width:74px">'+mean(st,right)+'</td>'+
    '<td style="position:sticky;right:0;background:var(--panel);text-align:center;padding:4px;font-weight:700;z-index:2;width:74px;min-width:74px;max-width:74px">'+annualMean(st)+'</td></tr>').join('')+""")
 change("""'<td style="text-align:center;padding:8px;border-top:1px solid var(--line)">'+cell(st,ev)+'</td>'""",
-       """'<td style="text-align:center;padding:5px;border-top:1px solid var(--line)">'+cell(st,ev)+'</td>'""")
+       """'<td style="text-align:center;padding:5px;border-top:1px solid var(--line)">'+cell(st,ev)+'</td>'""",2)
 source=source[:start]+s+source[end:]
 path.write_text(source,encoding='utf-8')
 print('V2.41 : élèves compacts, notes brutes, moyennes S1/S2/année collées à droite')
