@@ -36,6 +36,8 @@ jobs:
           python3 scripts/patch_cloud_v244.py index.html
           python3 scripts/strip_embedded_seed_v244.py index.html
           python3 scripts/patch_notes_v245.py index.html
+          python3 scripts/patch_student_radar_v246.py index.html
+          python3 scripts/patch_student_notes_v246.py index.html
           cp index.html site/index.html
           cp sauvegarde-en-ligne.html site/sauvegarde-en-ligne.html
           cp cloud-sync-v244.js site/cloud-sync-v244.js
@@ -68,7 +70,11 @@ jobs:
           assert "data-notes-layout-v241" in s
           assert "Moy. année" in s
           assert "academy-map-tactile-v243" in s
-          assert "<title>Compétences Pro V2.45" in s
+          assert "<title>Compétences Pro V2.46" in s
+          assert "function studentRadarPartialScore(" in s
+          assert "function studentNotesPage(" in s
+          assert "data-student-notes-v246" in s
+          assert "studentNotesPage();" in s
           assert "data-notes-readability-v245" in s
           assert "nameColWidth" in s
           assert "notes-student-row-v245" in s
@@ -92,7 +98,7 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add index.html
-            git commit -m "Publier V2.45 : tableau des notes lisible"
+            git commit -m "Publier V2.46 : Mes notes élève et radar progressif"
             git push origin HEAD:main
           fi
       - name: Configurer GitHub Pages
