@@ -38,6 +38,7 @@ jobs:
           python3 scripts/patch_notes_v245.py index.html
           python3 scripts/patch_student_radar_v246.py index.html
           python3 scripts/patch_student_notes_v246.py index.html
+          python3 scripts/patch_student_nav_v247.py index.html
           cp index.html site/index.html
           cp sauvegarde-en-ligne.html site/sauvegarde-en-ligne.html
           cp cloud-sync-v244.js site/cloud-sync-v244.js
@@ -70,7 +71,10 @@ jobs:
           assert "data-notes-layout-v241" in s
           assert "Moy. année" in s
           assert "academy-map-tactile-v243" in s
-          assert "<title>Compétences Pro V2.46" in s
+          assert "<title>Compétences Pro V2.47" in s
+          assert "['notes','Mes notes']" not in s
+          assert 'data-s="notes"><span class="mobile-nav-icon"' not in s
+          assert 'data-s="mobileevals"><span class="mobile-nav-icon"' in s
           assert "function studentRadarPartialScore(" in s
           assert "function studentNotesPage(" in s
           assert "data-student-notes-v246" in s
@@ -98,7 +102,7 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add index.html
-            git commit -m "Publier V2.46 : Mes notes élève et radar progressif"
+            git commit -m "Publier V2.47 : menu élève simplifié et chargement optimisé"
             git push origin HEAD:main
           fi
       - name: Configurer GitHub Pages
