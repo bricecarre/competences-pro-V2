@@ -2,7 +2,10 @@ from pathlib import Path
 import re,sys
 p=Path(sys.argv[1]);s=p.read_text(encoding='utf-8')
 if 'cloud-sync-v244.js' in s:
- print('V2.44 cloud already patched');sys.exit(0)
+ s=re.sub(r'<title>[^<]*</title>','<title>Compétences Pro V2.44 — Données synchronisées</title>',s,count=1)
+ s=s.replace('Version locale V2.43','Version en ligne V2.44')
+ p.write_text(s,encoding='utf-8')
+ print('V2.44 cloud already patched ; titre synchronisé');sys.exit(0)
 # Charger le moteur avant le gros script applicatif.
 anchor='<script>'
 assert anchor in s,"script application introuvable"
@@ -56,5 +59,6 @@ s=re.sub(r'function loadCatalogCache\(\)\{.*?\}\s*function loadCatalogMeta\(\)\{
 # Certaines opérations historiques écrivaient directement dans localStorage.
 s=s.replace('localStorage.setItem(DATA_STORAGE_KEY,JSON.stringify(data))','save(true)')
 
+s=s.replace('Version locale V2.43','Version en ligne V2.44')
 p.write_text(s,encoding='utf-8')
 print('V2.44 : mode données métier cloud uniquement activé')
