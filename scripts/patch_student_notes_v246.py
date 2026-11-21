@@ -2,6 +2,14 @@ from pathlib import Path
 import sys,re
 p=Path(sys.argv[1]);s=p.read_text(encoding='utf-8')
 marker='data-student-notes-v246'
+if marker in s:
+ old=" let cut=stored&&stored.firstS2Id?assessments.findIndex(x=>String(x.ev.id)===String(stored.firstS2Id)):-1;"
+ revised=""" let cut=-1;
+ if(stored&&stored.firstS2Id){
+  const boundary=candidates.findIndex(ev=>String(ev.id)===String(stored.firstS2Id));
+  if(boundary>=0)cut=assessments.filter(x=>candidates.indexOf(x.ev)<boundary).length;
+ }"""
+ if old in s:s=s.replace(old,revised,1)
 if marker not in s:
  new="""function studentNotesPage(){
  if(!session||session.role!=='student')return;
