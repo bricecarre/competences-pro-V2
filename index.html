@@ -7782,48 +7782,97 @@ function teacherNotesPage(allowedClassIds){
  const gradeIds=new Set((data.evalGrades||[]).filter(g=>pupilIds.has(g.studentId)).map(g=>g.evalId));
  const refKey=classReferentialKey(chosen);
  const candidates=data.evals.filter(ev=>evalReferentialKey(ev)===refKey&&
-   ((ev.classes||[]).includes(chosen.id)||resultIds.has(ev.id)||gradeIds.has(ev.id)))
+  ((ev.classes||[]).includes(chosen.id)||resultIds.has(ev.id)||gradeIds.has(ev.id)))
   .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''),'fr')||String(a.title||'').localeCompare(String(b.title||''),'fr'));
  const valid=n=>n!==null&&n!==undefined&&Number.isFinite(Number(n));
- const grades=new Map(candidates.map(ev=>[ev.id,new Map(pupils.map(st=>[st.id,effectiveEvalGrade(ev.id,st.id)]))]));
- const assessments=candidates.filter(ev=>pupils.some(st=>valid(grades.get(ev.id).get(st.id))));
- const semester=ev=>teacherNotesSemesterAssignment(chosen.id,ev.id);
- const ordered=[...assessments.filter(ev=>semester(ev)===1),...assessments.filter(ev=>semester(ev)===2)];
- const grade=(st,ev)=>grades.get(ev.id).get(st.id);
+ const gradeMap=new Map(candidates.map(ev=>[ev.id,new Map(pupils.map(st=>[st.id,effectiveEvalGrade(ev.id,st.id)]))]));
+ const assessments=candidates.filter(ev=>pupils.some(st=>valid(gradeMap.get(ev.id).get(st.id))));
+ const stored=(data.teacherNotesSemesterCutoffs||{})[String(chosen.id)];
+ let cut=stored&&stored.firstS2Id?assessments.findIndex(ev=>String(ev.id)===String(stored.firstS2Id)):-1;
+ if(cut<0&&stored&&Number.isInteger(stored.index))cut=Math.max(0,Math.min(assessments.length,stored.index));
+ if(cut<0){
+  const oldFirstS2=assessments.findIndex(ev=>(data.teacherNotesSemesters||{})[JSON.stringify([chosen.id,ev.id])]===2);
+  cut=oldFirstS2>=0?oldFirstS2:Math.ceil(assessments.length/2);
+ }
+ const left=assessments.slice(0,cut),right=assessments.slice(cut);
+ const grade=(st,ev)=>gradeMap.get(ev.id).get(st.id);
  const cell=(st,ev)=>{
-  const value=grade(st,ev);
-  return valid(value)?'<span title="'+esc(evalGradeSourceLabel(ev.id,st.id))+'">'+esc(formatGrade(value))+'</span>':'<span class="muted">—</span>';
+  const n=grade(st,ev);
+  return valid(n)?'<span title="'+esc(evalGradeSourceLabel(ev.id,st.id))+'">'+esc(formatGrade(n))+'</span>':'<span class="muted">—</span>';
  };
- const mean=(st,sem)=>{
-  const values=assessments.filter(ev=>semester(ev)===sem).map(ev=>grade(st,ev)).filter(valid).map(Number);
+ const mean=(st,evals)=>{
+  const values=evals.map(ev=>grade(st,ev)).filter(valid).map(Number);
   return values.length?(values.reduce((a,b)=>a+b,0)/values.length).toLocaleString('fr-FR',{maximumFractionDigits:2})+' / 20':'—';
  };
- const headings=ordered.map(ev=>'<th style="width:72px;min-width:72px;max-width:72px;padding:6px;background:var(--panel);position:sticky;top:0;vertical-align:bottom">'+
-  '<div data-notes-heading-vertical-v239="1" style="writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block;height:185px;max-height:185px;overflow:hidden;text-align:left;white-space:nowrap;vertical-align:middle" title="'+esc(ev.title||'Évaluation')+'">'+esc(ev.title||'Évaluation')+'</div><div class="muted small">'+esc(ev.date||'')+'</div>'+
-  '<label class="muted small">Semestre <select class="input" style="padding:3px" data-notes-semester="'+esc(ev.id)+'" aria-label="Semestre de '+esc(ev.title||'Évaluation')+'">'+
-  '<option value="1"'+(semester(ev)===1?' selected':'')+'>1</option><option value="2"'+(semester(ev)===2?' selected':'')+'>2</option></select></label></th>').join('');
+ const head=ev=>'<th data-notes-eval-head="'+esc(ev.id)+'" title="'+esc(ev.title||'Évaluation')+'" style="width:72px;min-width:72px;max-width:72px;padding:6px;background:var(--panel);position:sticky;top:0;vertical-align:bottom;text-align:center">'+
+  '<div data-notes-heading-vertical-v239="1" style="writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block;height:185px;max-height:185px;overflow:hidden;text-align:left;white-space:nowrap">'+esc(ev.title||'Évaluation')+'</div>'+
+  '<div class="muted small">'+esc(ev.date||'')+'</div></th>';
+ const markerHead='<th data-notes-cut="1" tabindex="0" role="slider" aria-label="Séparation entre le semestre 1 et le semestre 2" aria-valuemin="0" aria-valuemax="'+assessments.length+'" aria-valuenow="'+cut+'" title="Glisser la barre pour déplacer la limite des semestres. Flèches gauche et droite possibles." style="width:18px;min-width:18px;max-width:18px;padding:0;background:var(--panel);position:sticky;top:0;cursor:ew-resize;touch-action:none;user-select:none;border-left:4px solid #e6a23c"><span style="display:inline-block;color:#e6a23c;font-size:14px">↔</span></th>';
+ const markerCell='<td style="width:18px;min-width:18px;max-width:18px;padding:0;border-left:4px solid #e6a23c;background:transparent"></td>';
  const table=assessments.length?
-  '<div style="overflow:auto;max-width:100%;border:1px solid var(--line);border-radius:10px"><table style="width:100%;border-spacing:0;min-width:650px"><thead><tr>'+
-  '<th style="position:sticky;left:0;top:0;background:var(--panel);min-width:180px;padding:10px;z-index:3">Élève</th>'+headings+
-  '<th style="background:var(--panel);padding:10px">Moy. S1</th><th style="background:var(--panel);padding:10px">Moy. S2</th></tr></thead><tbody>'+
-  pupils.map(st=>'<tr><th style="position:sticky;left:0;background:var(--panel);text-align:left;padding:10px">'+esc(st.last||'')+' '+esc(st.first||'')+'</th>'+
-  ordered.map(ev=>'<td style="text-align:center;padding:10px;border-top:1px solid var(--line)">'+cell(st,ev)+'</td>').join('')+
-  '<td style="text-align:center;padding:10px;font-weight:700">'+mean(st,1)+'</td><td style="text-align:center;padding:10px;font-weight:700">'+mean(st,2)+'</td></tr>').join('')+
+  '<div id="notes-scroll-v240" style="position:relative;overflow:auto;max-width:100%;border:1px solid var(--line);border-radius:10px">'+
+  '<div id="notes-drag-guide-v240" style="display:none;position:absolute;top:0;bottom:0;width:4px;background:#e6a23c;z-index:6;pointer-events:none"></div>'+
+  '<table style="width:100%;border-spacing:0;min-width:580px"><thead><tr>'+
+  '<th style="position:sticky;left:0;top:0;background:var(--panel);min-width:180px;padding:10px;z-index:3;text-align:left">Élève</th>'+
+  left.map(head).join('')+markerHead+right.map(head).join('')+
+  '<th style="background:var(--panel);padding:10px;min-width:85px">Moy. S1</th><th style="background:var(--panel);padding:10px;min-width:85px">Moy. S2</th></tr></thead><tbody>'+
+  pupils.map(st=>'<tr><th style="position:sticky;left:0;background:var(--panel);text-align:left;padding:10px;z-index:1;white-space:nowrap">'+esc(st.last||'')+' '+esc(st.first||'')+'</th>'+
+   left.map(ev=>'<td style="text-align:center;padding:8px;border-top:1px solid var(--line)">'+cell(st,ev)+'</td>').join('')+
+   markerCell+
+   right.map(ev=>'<td style="text-align:center;padding:8px;border-top:1px solid var(--line)">'+cell(st,ev)+'</td>').join('')+
+   '<td style="text-align:center;padding:8px;font-weight:700">'+mean(st,left)+'</td>'+
+   '<td style="text-align:center;padding:8px;font-weight:700">'+mean(st,right)+'</td></tr>').join('')+
   '</tbody></table></div>':
-  '<div class="card muted">Aucune note pour cette classe. Les évaluations apparaîtront dès qu’un élève aura une note.</div>';
- shell(title('Notes','Récapitulatif semestriel par classe')+
+  '<div class="card muted">Aucune note dans cette classe. Les évaluations apparaîtront dès qu’un élève aura une note.</div>';
+ shell(title('Notes','Récapitulatif chronologique par classe')+
   '<div class="card" style="margin-bottom:14px"><label for="teacherNotesClass">Classe</label> <select id="teacherNotesClass" class="input">'+
   classes.map(c=>'<option value="'+esc(c.id)+'"'+(c.id===chosen.id?' selected':'')+'>'+esc(c.name)+'</option>').join('')+
-  '</select><p class="muted small">'+pupils.length+' élève(s) · '+assessments.length+' évaluation(s) notée(s). Choisissez le semestre sous chaque évaluation. Les notes existantes ne sont pas modifiées.</p></div>'+table);
- const select=document.getElementById('teacherNotesClass');
- if(select)select.onchange=()=>{teacherNotesSelectedClass=select.value;teacherNotesPage(allowedClassIds)};
- document.querySelectorAll('[data-notes-semester]').forEach(input=>input.onchange=()=>{
-  const evalId=input.dataset.notesSemester;
-  if(!assessments.some(ev=>ev.id===evalId))return;
-  data.teacherNotesSemesters=data.teacherNotesSemesters||{};
-  data.teacherNotesSemesters[JSON.stringify([chosen.id,evalId])]=input.value==='2'?2:1;
-  if(save()===false){alert('Impossible d’enregistrer le semestre.');return}
+  '</select><p class="muted small">'+pupils.length+' élève(s) · '+assessments.length+' évaluation(s) notée(s). <b>À gauche de la barre orange : semestre 1 ; à droite : semestre 2.</b> Déplacez la barre ↔ horizontalement pour ajuster la limite.</p></div>'+table);
+ const selector=document.getElementById('teacherNotesClass');
+ if(selector)selector.onchange=()=>{teacherNotesSelectedClass=selector.value;teacherNotesPage(allowedClassIds)};
+ const handle=document.querySelector('[data-notes-cut]');
+ const wrapper=document.getElementById('notes-scroll-v240');
+ const guide=document.getElementById('notes-drag-guide-v240');
+ if(!handle||!wrapper||!guide)return;
+ const indexAt=clientX=>{
+  const headers=Array.from(wrapper.querySelectorAll('[data-notes-eval-head]'));
+  const idx=headers.findIndex(h=>clientX<h.getBoundingClientRect().left+h.getBoundingClientRect().width/2);
+  return idx<0?headers.length:idx;
+ };
+ const saveCut=next=>{
+  next=Math.max(0,Math.min(assessments.length,next));
+  if(next===cut)return;
+  data.teacherNotesSemesterCutoffs=data.teacherNotesSemesterCutoffs||{};
+  data.teacherNotesSemesterCutoffs[String(chosen.id)]={index:next,firstS2Id:assessments[next]?String(assessments[next].id):null};
+  save();
   teacherNotesPage(allowedClassIds);
+ };
+ let dragStart=null;
+ handle.addEventListener('pointerdown',e=>{
+  if(e.button!==0)return;
+  dragStart={id:e.pointerId,x:e.clientX};
+  handle.setPointerCapture(e.pointerId);
+  e.preventDefault();
+ });
+ handle.addEventListener('pointermove',e=>{
+  if(!dragStart||dragStart.id!==e.pointerId)return;
+  const rect=wrapper.getBoundingClientRect();
+  guide.style.left=(e.clientX-rect.left+wrapper.scrollLeft)+'px';
+  guide.style.display='block';
+ });
+ handle.addEventListener('pointerup',e=>{
+  if(!dragStart||dragStart.id!==e.pointerId)return;
+  const target=indexAt(e.clientX);
+  dragStart=null;
+  guide.style.display='none';
+  saveCut(target);
+ });
+ handle.addEventListener('pointercancel',()=>{dragStart=null;guide.style.display='none'});
+ handle.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft'||e.key==='ArrowRight'){
+   e.preventDefault();
+   saveCut(cut+(e.key==='ArrowLeft'?-1:1));
+  }
  });
 }
 
