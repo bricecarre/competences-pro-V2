@@ -8,11 +8,11 @@ if marker in s:
 a=s.index('function studentMobileContent(')
 b=s.index('\nfunction bindStudentMobileCards(',a)
 block=s[a:b]
-old="return \`<button class=\\"student-mobile-pfmp-card\\""
+# ancien brouillon retiré
 # Insert diary UI beneath summary cards without replacing the existing PFMP evaluation view.
-needle="</button>\`}).join(''):'<div class=\\"student-mobile-empty\\">Aucune PFMP configurée.</div>'}</section></div>\`"
+needle="</button>`}).join(''):'<div class=\"student-mobile-empty\">Aucune PFMP configurée.</div>'}</section></div>`"
 assert needle in block,'PFMP student cards not found'
-block=block.replace(needle,"</button>\`}).join(''):'<div class=\\"student-mobile-empty\\">Aucune PFMP configurée.</div>'}<div id=\\"cp-pfmp-journal-v250\\" data-pfmp-activity-journal-v250=\\"student\\"></div></section></div>\`",1)
+block=block.replace(needle,"</button>`}).join(''):'<div class=\"student-mobile-empty\">Aucune PFMP configurée.</div>'}<div id=\"cp-pfmp-journal-v250\" data-pfmp-activity-journal-v250=\"student\"></div></section></div>`",1)
 s=s[:a]+block+s[b:]
 # Bind student diary on the existing mobile PFMP page, which is also used on desktop.
 needle=""" shell(studentMobileContent(student.id,mode));
@@ -110,9 +110,9 @@ s=s[:a]+block+s[b:]
 a=s.index('function pfmpEvaluationStudentDetail(')
 b=s.index('\nfunction pfmpEvaluationOverview(',a)
 block=s[a:b]
-needle=" </div>\`)\n}"
+needle=" </div>`)\n}"
 assert needle in block,'readonly PFMP modal ending not found'
-block=block.replace(needle," </div><div class=\\"card\\" id=\\"cp-pfmp-student-evaluation-diary-v250\\" style=\\"margin-top:12px\\"></div>\`);\n cpPfmpTeacherDiary(s.id,p.id,'cp-pfmp-student-evaluation-diary-v250');\n}",1)
+block=block.replace(needle," </div><div class=\"card\" id=\"cp-pfmp-student-evaluation-diary-v250\" style=\"margin-top:12px\"></div>`);\n cpPfmpTeacherDiary(s.id,p.id,'cp-pfmp-student-evaluation-diary-v250');\n}",1)
 s=s[:a]+block+s[b:]
 s=re.sub(r'<title>[^<]*</title>','<title>Compétences Pro V2.50 — Carnet PFMP</title>',s,count=1)
 p.write_text(s,encoding='utf-8')
