@@ -41,6 +41,7 @@ jobs:
           python3 scripts/patch_student_nav_v247.py index.html
           python3 scripts/patch_lazy_student_v248.py index.html
           python3 scripts/patch_student_pfmp_v249.py index.html
+          python3 scripts/patch_pfmp_journal_v250.py index.html
           cp index.html site/index.html
           cp sauvegarde-en-ligne.html site/sauvegarde-en-ligne.html
           cp cloud-sync-v244.js site/cloud-sync-v244.js
@@ -59,6 +60,7 @@ jobs:
           node --check /tmp/cp-backup-uploader.mjs
           node --check site/cloud-sync-v244.js
           grep -q 'loadedSections.has' site/cloud-sync-v244.js
+          grep -q 'cp_pfmp_activity_entries' site/cloud-sync-v244.js
           python3 - <<'PY'
           from pathlib import Path
           import re
@@ -74,7 +76,10 @@ jobs:
           assert "data-notes-layout-v241" in s
           assert "Moy. année" in s
           assert "academy-map-tactile-v243" in s
-          assert "<title>Compétences Pro V2.49" in s
+          assert "<title>Compétences Pro V2.50" in s
+          assert "data-pfmp-activity-journal-v250" in s
+          assert "function cpPfmpStudentDiary(" in s
+          assert "function cpPfmpTeacherDiary(" in s
           assert "['pfmp','Mes PFMP']" in s
           assert "if(section==='pfmp'||section==='mobilepfmp')" in s
           assert 'data-s="pfmp"><span class="mobile-nav-icon">🏭</span><span class="mobile-nav-label">Mes PFMP' in s
@@ -110,7 +115,7 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add index.html
-            git commit -m "Publier V2.49 : espace Mes PFMP élève et chargement allégé"
+            git commit -m "Publier V2.50 : carnet PFMP élève et consultation par le professeur"
             git push origin HEAD:main
           fi
       - name: Configurer GitHub Pages
