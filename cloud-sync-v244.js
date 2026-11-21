@@ -92,8 +92,8 @@ async function readBackup(root){
  if(!Array.isArray(obj.schools)||!Array.isArray(obj.students)||!Array.isArray(obj.evals))throw Error('Le fichier distant n’est pas une sauvegarde Compétences Pro.');
  return obj;
 }
-async function writeSection(key,value,tag){
- const blob=new Blob([JSON.stringify(value)],{type:'application/json'});
+async function writeSection(key,value,tag,raw){
+ const blob=new Blob([raw??JSON.stringify(value)],{type:'application/json'});
  const paths=[];
  const count=Math.max(1,Math.ceil(blob.size/MAX_CHUNK));
  for(let i=0;i<count;i++){
@@ -104,11 +104,11 @@ async function writeSection(key,value,tag){
  }
  return {paths,bytes:blob.size,sha256:await sha(blob)};
 }
-async function publish(initial,parts,prior){
+async function publish(initial,parts,prior,serialized={}){
  const tag=crypto.randomUUID(),newManifest={...(prior||{})};
  for(const key of parts){
   status('☁️ Enregistrement en ligne : '+key);
-  newManifest[key]=await writeSection(key,initial[key]??null,tag);
+  newManifest[key]=await writeSection(key,initial[key]??null,tag,serialized[key]);
  }
  if(!revision){
   const {data,error}=await sb.from('cp_live_state')
@@ -125,7 +125,7 @@ async function publish(initial,parts,prior){
   revision=data.revision;
  }
  manifest=newManifest;
- for(const key of parts)lastJson[key]=JSON.stringify(initial[key]??null);
+ for(const key of parts)lastJson[key]=serialized[key]??JSON.stringify(initial[key]??null);
  status('☁️ Toutes les données sont enregistrées en ligne (version '+revision+').');
 }
 async function readCloud(root,state){
@@ -174,18 +174,18 @@ async function flush(){
  working=true;
  const obj=pendingData;pendingData=null;
  try{
-  const changed=[];
+  const changed=[],serialized={};
   for(const key of SECTIONS){
    const str=JSON.stringify(obj[key]??null);
-   if(str!==lastJson[key])changed.push(key);
+   if(str!==lastJson[key]){changed.push(key);serialized[key]=str}
   }
   if(!changed.length){dirty=false;return}
   const remote=await getState();
   if(!remote||remote.revision!==revision)throw Error('Conflit avec une autre session : données distantes non écrasées.');
-  await publish(obj,changed,manifest);
-  dirty=false;
+  await publish(obj,changed,manifest,serialized);
+  dirty=!!pendingData;
  }catch(e){pendingData=obj;fail(e.message)}
- finally{working=false}
+ finally{working=false;if(pendingData&&active&&!conflict){clearTimeout(timer);timer=setTimeout(()=>flush().catch(e=>fail(e.message)),1500)}}
 }
 function schedule(obj){
  if(!active||conflict)return;
