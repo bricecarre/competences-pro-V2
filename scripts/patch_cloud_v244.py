@@ -51,5 +51,10 @@ s=s.replace(''' // Crée/rafraîchit immédiatement les deux copies persistantes
 assert ' // Aucune persistance locale des données métier' in s,"bootstrap non corrigé"
 # Les anciens mécanismes sont conservés comme code mort pour compatibilité, sans être appelés.
 s=s.replace('<title>Compétences Pro V2.43 — Suivi des compétences</title>','<title>Compétences Pro V2.44 — Données synchronisées</title>',1)
+# Supprimer le cache de référentiel du navigateur : données uniquement distantes.
+s=re.sub(r'function loadCatalogCache\(\)\{.*?\}\s*function loadCatalogMeta\(\)\{.*?\}\s*function saveCatalogCache\(list,meta=\{\}\)\{.*?\}(?=\s*let NATIONAL_TCI_CATALOG)',"function loadCatalogCache(){return []} function loadCatalogMeta(){return {}} function saveCatalogCache(list,meta={}){}",s,flags=re.S)
+# Certaines opérations historiques écrivaient directement dans localStorage.
+s=s.replace('localStorage.setItem(DATA_STORAGE_KEY,JSON.stringify(data))','save(true)')
+
 p.write_text(s,encoding='utf-8')
 print('V2.44 : mode données métier cloud uniquement activé')
