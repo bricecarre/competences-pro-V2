@@ -31,7 +31,8 @@ jobs:
           python3 scripts/patch_notes_v239.py index.html
           python3 scripts/patch_notes_v240.py index.html
           python3 scripts/patch_notes_v241.py index.html
-          python3 scripts/patch_academy_mobile_v243.py index.html
+          python3 scripts/patch_academy_map_mobile_v243.py index.html
+          python3 scripts/patch_version_v243.py index.html
           cp index.html site/index.html
           python3 - <<'PY'
           from pathlib import Path
@@ -48,6 +49,8 @@ jobs:
           assert "data-notes-layout-v241" in s
           assert "Moy. année" in s
           assert "academy-map-tactile-v243" in s
+          assert "<title>Compétences Pro V2.43" in s
+          assert "Version locale V2.43" in s
           assert "academy-mobile-select-v242" not in s
           assert "academy-premium-hit" in s
           assert "annualMean(st)" in s
@@ -64,7 +67,7 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add index.html
-            git commit -m "Publier V2.43 : restaurer la carte et corriger les boutons tactiles"
+            git commit -m "Publier V2.43 : carte tactile et titre synchronisés"
             git push origin HEAD:main
           fi
       - name: Configurer GitHub Pages
