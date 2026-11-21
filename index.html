@@ -7798,13 +7798,21 @@ function teacherNotesPage(allowedClassIds){
  const grade=(st,ev)=>gradeMap.get(ev.id).get(st.id);
  const cell=(st,ev)=>{
   const n=grade(st,ev);
-  return valid(n)?'<span title="'+esc(evalGradeSourceLabel(ev.id,st.id))+'">'+esc(formatGrade(n))+'</span>':'<span class="muted">—</span>';
+  return valid(n)?'<span title="'+esc(evalGradeSourceLabel(ev.id,st.id))+'">'+esc(Number(n).toLocaleString('fr-FR',{maximumFractionDigits:2}))+'</span>':'<span class="muted">—</span>';
  };
- const mean=(st,evals)=>{
+ const meanValue=(st,evals)=>{
   const values=evals.map(ev=>grade(st,ev)).filter(valid).map(Number);
-  return values.length?(values.reduce((a,b)=>a+b,0)/values.length).toLocaleString('fr-FR',{maximumFractionDigits:2})+' / 20':'—';
+  return values.length?values.reduce((a,b)=>a+b,0)/values.length:null;
  };
- const head=ev=>'<th data-notes-eval-head="'+esc(ev.id)+'" title="'+esc(ev.title||'Évaluation')+'" style="width:72px;min-width:72px;max-width:72px;padding:6px;background:var(--panel);position:sticky;top:0;vertical-align:bottom;text-align:center">'+
+ const displayMean=n=>n===null?'—':n.toLocaleString('fr-FR',{maximumFractionDigits:2})+' / 20';
+ const mean=(st,evals)=>displayMean(meanValue(st,evals));
+ // Une moyenne annuelle équilibrée entre S1 et S2, même si les semestres ont
+ // des nombres d'évaluations différents. Un semestre sans note est ignoré.
+ const annualMean=st=>{
+  const semesters=[meanValue(st,left),meanValue(st,right)].filter(n=>n!==null);
+  return displayMean(semesters.length?semesters.reduce((a,b)=>a+b,0)/semesters.length:null);
+ };
+ const head=ev=>'<th data-notes-eval-head="'+esc(ev.id)+'" title="'+esc(ev.title||'Évaluation')+'" style="width:64px;min-width:64px;max-width:64px;padding:4px;background:var(--panel);position:sticky;top:0;vertical-align:bottom;text-align:center">'+
   '<div data-notes-heading-vertical-v239="1" style="writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block;height:185px;max-height:185px;overflow:hidden;text-align:left;white-space:nowrap">'+esc(ev.title||'Évaluation')+'</div>'+
   '<div class="muted small">'+esc(ev.date||'')+'</div></th>';
  const markerHead='<th data-notes-cut="1" tabindex="0" role="slider" aria-label="Séparation entre le semestre 1 et le semestre 2" aria-valuemin="0" aria-valuemax="'+assessments.length+'" aria-valuenow="'+cut+'" title="Glisser la barre pour déplacer la limite des semestres. Flèches gauche et droite possibles." style="width:18px;min-width:18px;max-width:18px;padding:0;background:var(--panel);position:sticky;top:0;cursor:ew-resize;touch-action:none;user-select:none;border-left:4px solid #e6a23c"><span style="display:inline-block;color:#e6a23c;font-size:14px">↔</span></th>';
@@ -7812,16 +7820,19 @@ function teacherNotesPage(allowedClassIds){
  const table=assessments.length?
   '<div id="notes-scroll-v240" style="position:relative;overflow:auto;max-width:100%;border:1px solid var(--line);border-radius:10px">'+
   '<div id="notes-drag-guide-v240" style="display:none;position:absolute;top:0;bottom:0;width:4px;background:#e6a23c;z-index:6;pointer-events:none"></div>'+
-  '<table style="width:100%;border-spacing:0;min-width:580px"><thead><tr>'+
-  '<th style="position:sticky;left:0;top:0;background:var(--panel);min-width:180px;padding:10px;z-index:3;text-align:left">Élève</th>'+
+  '<table data-notes-layout-v241="1" style="width:max-content;min-width:100%;table-layout:fixed;border-spacing:0"><thead><tr>'+
+  '<th style="position:sticky;left:0;top:0;background:var(--panel);width:132px;min-width:132px;max-width:132px;padding:5px;z-index:6;text-align:left">Élève</th>'+
   left.map(head).join('')+markerHead+right.map(head).join('')+
-  '<th style="background:var(--panel);padding:10px;min-width:85px">Moy. S1</th><th style="background:var(--panel);padding:10px;min-width:85px">Moy. S2</th></tr></thead><tbody>'+
-  pupils.map(st=>'<tr><th style="position:sticky;left:0;background:var(--panel);text-align:left;padding:10px;z-index:1;white-space:nowrap">'+esc(st.last||'')+' '+esc(st.first||'')+'</th>'+
-   left.map(ev=>'<td style="text-align:center;padding:8px;border-top:1px solid var(--line)">'+cell(st,ev)+'</td>').join('')+
+  '<th style="position:sticky;right:148px;top:0;background:var(--panel);width:74px;min-width:74px;max-width:74px;padding:4px;z-index:5;border-left:1px solid var(--line)">Moy. S1</th>'+
+  '<th style="position:sticky;right:74px;top:0;background:var(--panel);width:74px;min-width:74px;max-width:74px;padding:4px;z-index:5">Moy. S2</th>'+
+  '<th style="position:sticky;right:0;top:0;background:var(--panel);width:74px;min-width:74px;max-width:74px;padding:4px;z-index:5">Moy. année</th></tr></thead><tbody>'+
+  pupils.map(st=>'<tr><th style="position:sticky;left:0;background:var(--panel);width:132px;min-width:132px;max-width:132px;text-align:left;padding:5px;z-index:3"><span title="'+esc((st.last||'')+' '+(st.first||''))+'" style="display:block;max-width:122px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(st.last||'')+' '+esc(st.first||'')+'</span></th>'+
+   left.map(ev=>'<td style="text-align:center;padding:5px;border-top:1px solid var(--line)">'+cell(st,ev)+'</td>').join('')+
    markerCell+
-   right.map(ev=>'<td style="text-align:center;padding:8px;border-top:1px solid var(--line)">'+cell(st,ev)+'</td>').join('')+
-   '<td style="text-align:center;padding:8px;font-weight:700">'+mean(st,left)+'</td>'+
-   '<td style="text-align:center;padding:8px;font-weight:700">'+mean(st,right)+'</td></tr>').join('')+
+   right.map(ev=>'<td style="text-align:center;padding:5px;border-top:1px solid var(--line)">'+cell(st,ev)+'</td>').join('')+
+   '<td style="position:sticky;right:148px;background:var(--panel);text-align:center;padding:4px;font-weight:700;z-index:2;border-left:1px solid var(--line);width:74px;min-width:74px;max-width:74px">'+mean(st,left)+'</td>'+
+   '<td style="position:sticky;right:74px;background:var(--panel);text-align:center;padding:4px;font-weight:700;z-index:2;width:74px;min-width:74px;max-width:74px">'+mean(st,right)+'</td>'+
+   '<td style="position:sticky;right:0;background:var(--panel);text-align:center;padding:4px;font-weight:700;z-index:2;width:74px;min-width:74px;max-width:74px">'+annualMean(st)+'</td></tr>').join('')+
   '</tbody></table></div>':
   '<div class="card muted">Aucune note dans cette classe. Les évaluations apparaîtront dès qu’un élève aura une note.</div>';
  shell(title('Notes','Récapitulatif chronologique par classe')+
