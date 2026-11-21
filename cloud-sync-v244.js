@@ -245,7 +245,7 @@ window.cpCloudListPfmpActivities=async(studentId,pfmpId)=>{
 window.cpCloudAddPfmpActivity=async(studentId,pfmpId,date,content)=>{
  if(!user||!sb)throw Error('Session Supabase non disponible.');
  const text=String(content||'').trim();
- if(!studentId||!pfmpId||!/^\\d{4}-\\d{2}-\\d{2}$/.test(date))throw Error('Date, élève ou PFMP non valide.');
+ if(!studentId||!pfmpId||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(date))throw Error('Date, élève ou PFMP non valide.');
  if(!text||text.length>5000)throw Error('Saisis une activité de 1 à 5 000 caractères.');
  const {data,error}=await sb.from('cp_pfmp_activity_entries')
   .insert({owner_id:user.id,student_id:String(studentId),pfmp_id:String(pfmpId),activity_date:date,activity_text:text})
