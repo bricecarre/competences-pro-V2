@@ -131,6 +131,8 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: site
+      - name: Attendre la disponibilité de l'artifact GitHub Pages
+        run: sleep 25
       - name: Publier le site
         id: deployment
         uses: actions/deploy-pages@v4
