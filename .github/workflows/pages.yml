@@ -35,7 +35,7 @@ jobs:
           assert "['notes','Notes']" in s
           assert "function teacherNotesPage(" in s
           assert "filter(code=>String(code||'').trim().length>0)" in s
-          scripts=re.findall(r'<script\\b[^>]*>(.*?)</script>',s,re.S|re.I)
+          scripts=re.findall(r'<script[^>]*>(.*?)</script>',s,re.S|re.I)
           assert scripts, "Script application absent"
           Path('/tmp/competences-pro-validation.js').write_text(scripts[-1],encoding='utf-8')
           print('V2.37: navigation, tableau et compteurs vérifiés')
