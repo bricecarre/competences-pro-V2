@@ -27,6 +27,14 @@ jobs:
         run: |
           mkdir -p site
           cp index.html site/index.html
+          python3 scripts/patch_pfmp_v236.py site/index.html
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('site/index.html').read_text(encoding='utf-8')
+          assert 'V2.36 : afficher aussi' in s
+          assert 'openPfmpTimeline' in s
+          print('Controle de publication PFMP V2.36 valide')
+          PY
       - name: Configurer GitHub Pages
         uses: actions/configure-pages@v5
       - name: Envoyer les fichiers du site
