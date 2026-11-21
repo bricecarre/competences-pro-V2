@@ -115,7 +115,6 @@ async function renderTeacher(studentId,pfmpId,zoneId){
  }catch(err){zone.textContent='Impossible de charger les activités : '+err.message;}
 }
 function install(){
- document.title='Compétences Pro V2.51 — Activités PFMP';
  if(typeof window.cpPfmpTeacherDiary==='function'&&!window.cpPfmpTeacherDiary.__v251){
   const fn=function(studentId,pfmpId,zoneId){return renderTeacher(studentId,pfmpId,zoneId)};
   fn.__v251=true;window.cpPfmpTeacherDiary=fn;
@@ -139,6 +138,7 @@ function install(){
   }).finally(()=>{delete list.dataset.cpV251Loading});
  }
 }
+document.title='Compétences Pro V2.51 — Activités PFMP';
 const observer=new MutationObserver(()=>{install()});
 observer.observe(document.documentElement,{childList:true,subtree:true});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
