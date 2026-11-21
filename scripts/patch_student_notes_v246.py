@@ -18,7 +18,11 @@ if marker not in s:
    .map(ev=>({ev,grade:effectiveEvalGrade(ev.id,st.id)}))
    .filter(x=>valid(x.grade));
  const stored=(data.teacherNotesSemesterCutoffs||{})[String(cls.id)];
- let cut=stored&&stored.firstS2Id?assessments.findIndex(x=>String(x.ev.id)===String(stored.firstS2Id)):-1;
+ let cut=-1;
+ if(stored&&stored.firstS2Id){
+  const boundary=candidates.findIndex(ev=>String(ev.id)===String(stored.firstS2Id));
+  if(boundary>=0)cut=assessments.filter(x=>candidates.indexOf(x.ev)<boundary).length;
+ }
  if(cut<0&&stored&&Number.isInteger(stored.index))cut=Math.max(0,Math.min(assessments.length,stored.index));
  if(cut<0){
   const old=assessments.findIndex(x=>(data.teacherNotesSemesters||{})[JSON.stringify([cls.id,x.ev.id])]===2);
