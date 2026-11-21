@@ -115,9 +115,18 @@ async function renderTeacher(studentId,pfmpId,zoneId){
  }catch(err){zone.textContent='Impossible de charger les activités : '+err.message;}
 }
 function install(){
+ document.title='Compétences Pro V2.51 — Activités PFMP';
  if(typeof window.cpPfmpTeacherDiary==='function'&&!window.cpPfmpTeacherDiary.__v251){
   const fn=function(studentId,pfmpId,zoneId){return renderTeacher(studentId,pfmpId,zoneId)};
   fn.__v251=true;window.cpPfmpTeacherDiary=fn;
+ }
+ if(teacherMode()&&typeof activeAppraisalContext!=='undefined'&&activeAppraisalContext?.studentId&&activeAppraisalContext?.pfmpId){
+  const teacherZone=document.getElementById('cp-pfmp-teacher-journal-v250');
+  if(teacherZone&&!teacherZone.querySelector('.cp-v251-teacher-list')&&teacherZone.dataset.cpV251Loading!=='yes'){
+   teacherZone.dataset.cpV251Loading='yes';
+   renderTeacher(activeAppraisalContext.studentId,activeAppraisalContext.pfmpId,teacherZone.id)
+    .finally(()=>{delete teacherZone.dataset.cpV251Loading});
+  }
  }
  for(const wrapper of document.querySelectorAll('.cp-diary-entry-v250')){
   const list=wrapper.querySelector('.cp-diary-list-v250'),pfmpId=wrapper.dataset.pfmpId;
