@@ -22,3 +22,24 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Données scolaires personnelles (ne jamais committer)
+sauvegardes/
+backups/
+data-privees/
+eleves/
+exports-eleves/
+*.sqlite
+*.sqlite3
+*.db
+*.csv
+*.xlsx
+*.zip
+.env
+.env.*
+# JSON : ne pas exclure package.json / lock / configs nécessaires
+*.backup.json
+*academie*.json
+*etablissement*.json
+*eleves*.json
+*evaluations*.json
