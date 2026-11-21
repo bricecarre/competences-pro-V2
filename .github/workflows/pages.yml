@@ -28,6 +28,7 @@ jobs:
           mkdir -p site
           if ! grep -q 'function teacherNotesPage(' index.html; then python3 scripts/patch_notes_v237.py index.html; fi
           python3 scripts/patch_notes_v238.py index.html
+          python3 scripts/patch_notes_v239.py index.html
           cp index.html site/index.html
           python3 - <<'PY'
           from pathlib import Path
@@ -38,11 +39,12 @@ jobs:
           assert "function teacherNotesSemesterAssignment(" in s
           assert "data-notes-semester" in s
           assert "Moy. S1" in s and "Moy. S2" in s
+          assert "data-notes-heading-vertical-v239" in s
           assert "filter(code=>String(code||'').trim().length>0)" in s
           scripts=re.findall(r'<script[^>]*>(.*?)</script>',s,re.S|re.I)
           assert scripts, "Script application absent"
           Path('/tmp/competences-pro-validation.js').write_text(scripts[-1],encoding='utf-8')
-          print('V2.38: notes semestrielles et syntaxe contrôlées')
+          print('V2.39: en-têtes verticaux et syntaxe contrôlés')
           PY
           node --check /tmp/competences-pro-validation.js
       - name: Conserver la version corrigée dans le dépôt
@@ -51,7 +53,7 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add index.html
-            git commit -m "Publier la version V2.38 du tableau Notes semestriel"
+            git commit -m "Publier la version V2.39 avec les titres verticaux"
             git push origin HEAD:main
           fi
       - name: Configurer GitHub Pages
