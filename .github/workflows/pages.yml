@@ -30,6 +30,7 @@ jobs:
           python3 scripts/patch_notes_v238.py index.html
           python3 scripts/patch_notes_v239.py index.html
           python3 scripts/patch_notes_v240.py index.html
+          python3 scripts/patch_notes_v241.py index.html
           cp index.html site/index.html
           python3 - <<'PY'
           from pathlib import Path
@@ -43,11 +44,14 @@ jobs:
           assert "notes-scroll-v240" in s
           assert "data-notes-cut" in s
           assert "teacherNotesSemesterCutoffs" in s
+          assert "data-notes-layout-v241" in s
+          assert "Moy. année" in s
+          assert "annualMean(st)" in s
           assert "filter(code=>String(code||'').trim().length>0)" in s
           scripts=re.findall(r'<script[^>]*>(.*?)</script>',s,re.S|re.I)
           assert scripts, "Script application absent"
           Path('/tmp/competences-pro-validation.js').write_text(scripts[-1],encoding='utf-8')
-          print('V2.40: barre déplaçable et syntaxe contrôlées')
+          print('V2.41: tableau compact et moyennes fixes validés')
           PY
           node --check /tmp/competences-pro-validation.js
       - name: Conserver la version corrigée dans le dépôt
@@ -56,7 +60,7 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add index.html
-            git commit -m "Publier la version V2.40 avec une séparation S1/S2 déplaçable"
+            git commit -m "Publier V2.41 : notes compactes, S1/S2/année toujours visibles"
             git push origin HEAD:main
           fi
       - name: Configurer GitHub Pages
