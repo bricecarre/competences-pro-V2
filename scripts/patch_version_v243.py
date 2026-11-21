@@ -6,8 +6,8 @@ version="V2.43"
 new_title="Compétences Pro V2.43 — Suivi des compétences"
 s,n=re.subn(r"<title>[^<]*</title>","<title>"+new_title+"</title>",s,count=1)
 assert n==1,"Titre de l'onglet introuvable"
-s,n=re.subn(r"Version locale V2\.\d+(?:\.\d+)?\s*—\s*Administration à deux niveaux",
-            "Version locale "+version+" — Administration à deux niveaux",s,count=1)
+s,n=re.subn(r"Version locale V2\.\d+(?:\.\d+)?",
+            "Version locale "+version,s,count=1)
 if not n:
  print("Bandeau de connexion ancien non trouvé ; titre navigateur corrigé seul")
 # Le navigateur utilisera le titre du document, qui ne dépend plus des anciens composants.
