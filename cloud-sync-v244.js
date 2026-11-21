@@ -10,6 +10,8 @@ const SECTIONS=['school','schools','classes','teachers','students','sequences','
 let sb=null,user=null,manifest=null,revision=0;
 let active=false,conflict=false,working=false,dirty=false;
 let timer=null,pollTimer=null,pendingData=null,onRemote=null,lastData=null,lastJson={};
+const loadedSections=new Set();
+let firstRead=true;
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 const status=(message,isError=false)=>{
  let bar=document.getElementById('cp-cloud-v244-status');
@@ -137,13 +139,38 @@ async function publish(initial,parts,prior,serialized={}){
 async function readCloud(root,state){
  revision=state.revision;manifest=state.manifest||{};
  const obj={};
+ const skipLargeSequence=firstRead||!loadedSections.has('sequences');
  for(const key of Object.keys(manifest)){
+  if(key==='sequences'&&skipLargeSequence){
+   // Pas de téléchargement des 62 Mo documentaires avant de connaître le profil.
+   obj.sequences=[];
+   continue;
+  }
   showLoader(root,'Lecture en ligne : '+key+'…');
   const meta=manifest[key];
   obj[key]=JSON.parse(await readParts(meta.paths,meta.bytes,meta.sha256));
+  loadedSections.add(key);
+  lastJson[key]=JSON.stringify(obj[key]??null);
  }
- for(const key of SECTIONS)lastJson[key]=JSON.stringify(obj[key]??null);
+ firstRead=false;
  return obj;
+}
+async function ensureSequences(){
+ if(loadedSections.has('sequences'))return lastData?.sequences||[];
+ if(!active)throw Error('Le serveur n’est pas prêt.');
+ const current=await getState();
+ if(!current||current.revision!==revision)throw Error('Des données ont changé pendant la connexion. Recharge la page puis réessaie.');
+ const meta=manifest?.sequences;
+ if(!meta){loadedSections.add('sequences');lastJson.sequences='[]';return []}
+ status('☁️ Chargement des séquences pédagogiques…');
+ const raw=await readParts(meta.paths,meta.bytes,meta.sha256);
+ const sequences=JSON.parse(raw);
+ if(!Array.isArray(sequences))throw Error('Séquences en ligne incorrectes.');
+ loadedSections.add('sequences');
+ lastJson.sequences=JSON.stringify(sequences);
+ if(lastData)lastData.sequences=sequences;
+ status('☁️ Séquences chargées');
+ return sequences;
 }
 async function init(root){
  showLoader(root,'Connexion au serveur…');
@@ -153,6 +180,7 @@ async function init(root){
   obj=await readBackup(root);
   showLoader(root,'Création de la première version de travail en ligne. La sauvegarde originale sera conservée.');
   await publish(obj,SECTIONS,null);
+  SECTIONS.forEach(key=>loadedSections.add(key));
  }else obj=await readCloud(root,state);
  active=true;conflict=false;lastData=obj;
  status('☁️ Données chargées depuis Supabase — version '+revision);
@@ -182,6 +210,8 @@ async function flush(){
  try{
   const changed=[],serialized={};
   for(const key of SECTIONS){
+   // Ne jamais écrire [] pour une section omise lors du chargement ciblé.
+   if(!loadedSections.has(key))continue;
    const str=JSON.stringify(obj[key]??null);
    if(str!==lastJson[key]){changed.push(key);serialized[key]=str}
   }
@@ -200,6 +230,7 @@ function schedule(obj){
  timer=setTimeout(()=>{flush().catch(e=>fail(e.message))},2200);
 }
 window.cpCloudInitialize=init;
+window.cpCloudEnsureSequences=ensureSequences;
 window.cpCloudSave=schedule;
 window.cpCloudListen=cb=>{onRemote=cb};
 window.cpCloudReady=false;
