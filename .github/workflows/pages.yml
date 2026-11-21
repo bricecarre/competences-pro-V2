@@ -34,6 +34,7 @@ jobs:
           python3 scripts/patch_academy_map_mobile_v243.py index.html
           python3 scripts/patch_version_v243.py index.html
           python3 scripts/patch_cloud_v244.py index.html
+          python3 scripts/strip_embedded_seed_v244.py index.html
           cp index.html site/index.html
           cp sauvegarde-en-ligne.html site/sauvegarde-en-ligne.html
           cp cloud-sync-v244.js site/cloud-sync-v244.js
@@ -70,6 +71,7 @@ jobs:
           assert '<script src="cloud-sync-v244.js"></script>' in s
           assert "window.cpCloudInitialize(root)" in s
           assert "let data=JSON.parse(JSON.stringify(seed))" in s
+          assert len(s)<12_000_000, "Le HTML contient encore le gros jeu de données"
           assert "academy-mobile-select-v242" not in s
           assert "academy-premium-hit" in s
           assert "annualMean(st)" in s
