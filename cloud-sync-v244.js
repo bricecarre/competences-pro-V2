@@ -290,7 +290,4 @@ window.addEventListener('beforeunload',e=>{
  if(dirty&&active){e.preventDefault();e.returnValue='Des modifications ne sont pas encore envoyées en ligne.'}
 });
 })();
-(function(){
- const script=document.createElement('script');script.src='./pfmp-validation-v251.js';script.defer=true;
- document.head.appendChild(script);
-})();
+/* V2.51 interface temporairement désactivée : restauration du démarrage V2.50. */
