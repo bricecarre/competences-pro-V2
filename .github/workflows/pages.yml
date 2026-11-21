@@ -27,6 +27,20 @@ jobs:
         run: |
           mkdir -p site
           cp index.html site/index.html
+          python3 scripts/patch_notes_v237.py site/index.html
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('site/index.html').read_text(encoding='utf-8')
+          assert "['notes','Notes']" in s
+          assert "function teacherNotesPage(" in s
+          assert "filter(code=>String(code||'').trim().length>0)" in s
+          scripts=re.findall(r'<script\\b[^>]*>(.*?)</script>',s,re.S|re.I)
+          assert scripts, "Script application absent"
+          Path('/tmp/competences-pro-validation.js').write_text(scripts[-1],encoding='utf-8')
+          print('V2.37: navigation, tableau et compteurs vérifiés')
+          PY
+          node --check /tmp/competences-pro-validation.js
       - name: Configurer GitHub Pages
         uses: actions/configure-pages@v5
       - name: Envoyer les fichiers du site
