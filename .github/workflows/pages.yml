@@ -34,6 +34,8 @@ jobs:
           python3 scripts/patch_academy_map_mobile_v243.py index.html
           python3 scripts/patch_version_v243.py index.html
           cp index.html site/index.html
+          cp sauvegarde-en-ligne.html site/sauvegarde-en-ligne.html
+          test -s site/sauvegarde-en-ligne.html
           python3 - <<'PY'
           from pathlib import Path
           import re
