@@ -5,7 +5,12 @@ path=Path(sys.argv[1])
 source=path.read_text(encoding="utf-8")
 marker="data-notes-readability-v245"
 if marker in source:
-    print("V2.45 : affichage du tableau des notes déjà appliqué")
+    import re
+    source=re.sub(r"<title>[^<]*</title>",
+                  "<title>Compétences Pro V2.45 — Tableau des notes lisible</title>",
+                  source,count=1)
+    path.write_text(source,encoding="utf-8")
+    print("V2.45 : affichage déjà appliqué, titre navigateur actualisé")
     sys.exit(0)
 
 start=source.index("function teacherNotesPage(")
