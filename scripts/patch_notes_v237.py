@@ -48,7 +48,6 @@ function teacherNotesPage(allowedClassIds){
  if(select)select.onchange=()=>{teacherNotesSelectedClass=select.value;teacherNotesPage(allowedClassIds)};
 }
 '''
-one("function teacher(){",notes+"
-function teacher(){")
+one("function teacher(){",notes+"\nfunction teacher(){")
 p.write_text(s,encoding='utf-8')
 print('Correctif V2.37 appliqué : tableau Notes et tous codes items pris en compte')
