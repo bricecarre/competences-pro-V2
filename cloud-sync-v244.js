@@ -33,10 +33,10 @@ function showLoader(root,msg){
 }
 async function connect(root){
  if(!sb){
-  const mod=await import('https://esm.sh/@supabase/supabase-js@2.57.0');
+  const mod=await import('./supabase-client.js');
   sb=mod.createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true}});
  }
- const {data,error}=await sb.auth.getUser();
+ const {data,error}=await Promise.race([sb.auth.getUser(),new Promise(resolve=>setTimeout(()=>resolve({data:{user:null},error:new Error('Délai de vérification dépassé')}),12000))]);
  if(!error&&data.user){user=data.user;return}
  showLoader(root,'Connecte-toi avec le compte créé sur la page « Sauvegarde privée en ligne ».');
  const panel=root.querySelector('div');panel.insertAdjacentHTML('beforeend',
