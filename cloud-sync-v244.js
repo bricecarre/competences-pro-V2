@@ -67,12 +67,18 @@ async function getState(){
  return data;
 }
 async function readParts(paths,bytes,expected){
- const parts=[];
- for(const path of paths){
-  const {data,error}=await sb.storage.from(BUCKET).download(path);
-  if(error)throw Error('Fichier distant introuvable : '+error.message);
-  parts.push(data);
+ // Téléchargements simultanés, mais limités pour ne pas saturer un mobile.
+ const parts=new Array(paths.length);
+ let next=0;
+ async function worker(){
+  while(next<paths.length){
+   const index=next++;
+   const {data,error}=await sb.storage.from(BUCKET).download(paths[index]);
+   if(error)throw Error('Fichier distant introuvable : '+error.message);
+   parts[index]=data;
+  }
  }
+ await Promise.all(Array.from({length:Math.min(4,paths.length)},()=>worker()));
  const blob=new Blob(parts);
  if(bytes!=null&&blob.size!==Number(bytes))throw Error('Intégrité : taille de fichier incorrecte.');
  if(expected&&await sha(blob)!==expected)throw Error('Intégrité : empreinte SHA-256 incorrecte.');
