@@ -253,9 +253,44 @@ window.cpCloudAddPfmpActivity=async(studentId,pfmpId,date,content)=>{
  if(error)throw error;
  return data;
 };
+window.cpCloudUpdatePfmpActivity=async(id,date,content)=>{
+ if(!user||!sb)throw Error('Session Supabase indisponible.');
+ const value=String(content||'').trim();
+ if(!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(date)||!value||value.length>5000)throw Error('Date ou activité invalide.');
+ const {data,error}=await sb.from('cp_pfmp_activity_entries')
+  .update({activity_date:date,activity_text:value,updated_at:new Date().toISOString()})
+  .eq('owner_id',user.id).eq('id',id).neq('validation_status','confirmed').select('id').maybeSingle();
+ if(error)throw error;
+ if(!data)throw Error('Activité déjà validée ou introuvable. Recharge les activités.');
+ return data;
+};
+window.cpCloudDeletePfmpActivity=async(id)=>{
+ if(!user||!sb)throw Error('Session Supabase indisponible.');
+ const {data,error}=await sb.from('cp_pfmp_activity_entries').delete()
+  .eq('owner_id',user.id).eq('id',id).neq('validation_status','confirmed').select('id').maybeSingle();
+ if(error)throw error;
+ if(!data)throw Error('Activité déjà validée ou introuvable.');
+ return data;
+};
+window.cpCloudReviewPfmpActivity=async(id,codes,validate)=>{
+ if(!user||!sb)throw Error('Session Supabase indisponible.');
+ if(!Array.isArray(codes)||codes.length>120||codes.some(x=>typeof x!=='string'||x.length>180))throw Error('Compétences invalides.');
+ if(validate&&!codes.length)throw Error('Sélectionne au moins une compétence.');
+ const {data,error}=await sb.from('cp_pfmp_activity_entries')
+  .update({competency_codes:codes,validation_status:validate?'confirmed':'pending',
+    reviewed_at:validate?new Date().toISOString():null,reviewed_by:validate?user.id:null})
+  .eq('owner_id',user.id).eq('id',id).select('id,validation_status').maybeSingle();
+ if(error)throw error;
+ if(!data)throw Error('Activité introuvable.');
+ return data;
+};
 window.cpCloudListen=cb=>{onRemote=cb};
 window.cpCloudReady=false;
 window.addEventListener('beforeunload',e=>{
  if(dirty&&active){e.preventDefault();e.returnValue='Des modifications ne sont pas encore envoyées en ligne.'}
 });
+})();
+(function(){
+ const script=document.createElement('script');script.src='./pfmp-validation-v251.js';script.defer=true;
+ document.head.appendChild(script);
 })();
