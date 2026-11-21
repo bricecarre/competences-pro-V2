@@ -39,6 +39,18 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import re
+          s=Path('site/sauvegarde-en-ligne.html').read_text(encoding='utf-8')
+          assert 'cp-private-backups' in s and 'cp_backup_manifests' in s
+          assert 'crypto.subtle.digest' in s and '5*1024*1024' in s
+          blocks=re.findall(r'<script[^>]*>(.*?)</script>',s,re.S|re.I)
+          assert len(blocks)==1
+          Path('/tmp/cp-backup-uploader.mjs').write_text(blocks[0],encoding='utf-8')
+          print('Chargeur privé : structure validée')
+          PY
+          node --check /tmp/cp-backup-uploader.mjs
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
           s=Path('site/index.html').read_text(encoding='utf-8')
           assert "['notes','Notes']" in s
           assert "function teacherNotesPage(" in s
