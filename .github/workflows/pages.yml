@@ -45,8 +45,6 @@ jobs:
           cp index.html site/index.html
           cp sauvegarde-en-ligne.html site/sauvegarde-en-ligne.html
           cp cloud-sync-v244.js site/cloud-sync-v244.js
-          cp pfmp-validation-v251.js site/pfmp-validation-v251.js
-          node --check site/pfmp-validation-v251.js
           test -s site/sauvegarde-en-ligne.html
           python3 - <<'PY'
           from pathlib import Path
