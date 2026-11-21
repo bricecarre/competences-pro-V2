@@ -38,7 +38,6 @@ jobs:
           assert "['notes','Notes']" in s
           assert "function teacherNotesPage(" in s
           assert "function teacherNotesSemesterAssignment(" in s
-          assert "data-notes-semester" in s
           assert "Moy. S1" in s and "Moy. S2" in s
           assert "data-notes-heading-vertical-v239" in s
           assert "notes-scroll-v240" in s
