@@ -45,12 +45,16 @@ async function cpPfmpStudentDiary(studentId){
   const id=String(pfmp.id);
   fragments.push('<details class="card" style="margin-top:10px"><summary style="cursor:pointer;font-weight:700">✍️ Carnet d’activités — '+esc(pfmp.label||'PFMP')+'</summary>'
    +'<div class="cp-diary-entry-v250" data-pfmp-id="'+esc(id)+'" style="margin-top:12px">'
-   +'<p class="muted small">Décris les activités réalisées pendant cette période. Chaque enregistrement est transmis en ligne et marqué « En attente de confirmation du tuteur ».</p>'
+   +'<p class="muted small">Mes activités, enregistrées dans l’ordre chronologique. Chaque nouvelle activité attend la confirmation du tuteur.</p>'
+   +'<div class="cp-diary-list-v250">Chargement…</div>'
+   +'<div class="cp-diary-form-v250" hidden style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px">'
    +'<label style="display:block;margin-bottom:5px">Date de l’activité</label><input class="cp-diary-date-v250" type="date" value="'+new Date().toISOString().slice(0,10)+'" style="display:block;width:100%;max-width:220px;padding:8px">'
-   +'<label style="display:block;margin:10px 0 5px">Activités réalisées</label><textarea class="cp-diary-text-v250" rows="4" maxlength="5000" placeholder="Ex. : traçage, découpe, assemblage, soudage, contrôle…" style="width:100%;min-height:100px;padding:9px"></textarea>'
-   +'<button type="button" class="btn primary cp-diary-save-v250">Enregistrer mon activité</button>'
+   +'<label style="display:block;margin:10px 0 5px">Activité réalisée</label><textarea class="cp-diary-text-v250" rows="4" maxlength="5000" placeholder="Décris ce que tu as fait aujourd’hui…" style="width:100%;min-height:90px;padding:9px"></textarea>'
+   +'<button type="button" class="btn primary cp-diary-save-v250">Enregistrer cette activité</button>'
+   +'<button type="button" class="btn cp-diary-cancel-v250">Annuler</button></div>'
    +'<p role="status" class="muted small cp-diary-info-v250"></p>'
-   +'<div class="cp-diary-list-v250">Chargement…</div></div></details>');
+   +'<button type="button" class="btn primary cp-diary-add-v250">+ Ajouter une activité</button>'
+   +'</div></details>');
  }
  zone.innerHTML=fragments.join('');
  for(const wrapper of zone.querySelectorAll('.cp-diary-entry-v250')){
@@ -62,6 +66,15 @@ async function cpPfmpStudentDiary(studentId){
    list.innerHTML=cpPfmpActivityListHtml(entries);
   };
   try{await refresh()}catch(err){list.textContent='Impossible de récupérer les activités : '+err.message}
+  const form=wrapper.querySelector('.cp-diary-form-v250');
+  const add=wrapper.querySelector('.cp-diary-add-v250');
+  add.onclick=()=>{
+   form.hidden=false;add.hidden=true;
+   wrapper.querySelector('.cp-diary-text-v250').focus();
+  };
+  wrapper.querySelector('.cp-diary-cancel-v250').onclick=()=>{
+   form.hidden=true;add.hidden=false;info.textContent='';
+  };
   wrapper.querySelector('.cp-diary-save-v250').onclick=async()=>{
    if(session?.role!=='student'||session.user!==studentId)return;
    const date=wrapper.querySelector('.cp-diary-date-v250').value;
@@ -72,8 +85,9 @@ async function cpPfmpStudentDiary(studentId){
    try{
     await window.cpCloudAddPfmpActivity(studentId,pfmpId,date,message);
     field.value='';
-    info.textContent='Activité enregistrée. Confirmation du tuteur en attente.';
     await refresh();
+    form.hidden=true;add.hidden=false;
+    info.textContent='Activité ajoutée. Elle est maintenant en attente de confirmation du tuteur.';
    }catch(err){info.textContent='Activité non enregistrée : '+err.message}
    finally{btn.disabled=false}
   };
