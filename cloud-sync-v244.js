@@ -232,6 +232,27 @@ function schedule(obj){
 window.cpCloudInitialize=init;
 window.cpCloudEnsureSequences=ensureSequences;
 window.cpCloudSave=schedule;
+window.cpCloudListPfmpActivities=async(studentId,pfmpId)=>{
+ if(!user||!sb)throw Error('Session Supabase non disponible.');
+ if(!studentId||!pfmpId)throw Error('Profil élève ou PFMP manquant.');
+ const {data,error}=await sb.from('cp_pfmp_activity_entries')
+  .select('id,student_id,pfmp_id,activity_date,activity_text,created_at')
+  .eq('owner_id',user.id).eq('student_id',String(studentId)).eq('pfmp_id',String(pfmpId))
+  .order('activity_date',{ascending:true}).order('created_at',{ascending:true}).limit(500);
+ if(error)throw error;
+ return data||[];
+};
+window.cpCloudAddPfmpActivity=async(studentId,pfmpId,date,content)=>{
+ if(!user||!sb)throw Error('Session Supabase non disponible.');
+ const text=String(content||'').trim();
+ if(!studentId||!pfmpId||!/^\\d{4}-\\d{2}-\\d{2}$/.test(date))throw Error('Date, élève ou PFMP non valide.');
+ if(!text||text.length>5000)throw Error('Saisis une activité de 1 à 5 000 caractères.');
+ const {data,error}=await sb.from('cp_pfmp_activity_entries')
+  .insert({owner_id:user.id,student_id:String(studentId),pfmp_id:String(pfmpId),activity_date:date,activity_text:text})
+  .select('id,activity_date,activity_text,created_at').single();
+ if(error)throw error;
+ return data;
+};
 window.cpCloudListen=cb=>{onRemote=cb};
 window.cpCloudReady=false;
 window.addEventListener('beforeunload',e=>{
