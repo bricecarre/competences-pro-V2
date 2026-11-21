@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -26,8 +26,8 @@ jobs:
       - name: Preparer le dossier public
         run: |
           mkdir -p site
+          python3 scripts/patch_notes_v237.py index.html
           cp index.html site/index.html
-          python3 scripts/patch_notes_v237.py site/index.html
           python3 - <<'PY'
           from pathlib import Path
           import re
@@ -41,6 +41,15 @@ jobs:
           print('V2.37: navigation, tableau et compteurs vérifiés')
           PY
           node --check /tmp/competences-pro-validation.js
+      - name: Conserver la version corrigée dans le dépôt
+        run: |
+          if ! git diff --quiet -- index.html; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add index.html
+            git commit -m "Publier la version V2.37 avec le menu Notes et les compteurs corrigés"
+            git push origin HEAD:main
+          fi
       - name: Configurer GitHub Pages
         uses: actions/configure-pages@v5
       - name: Envoyer les fichiers du site
