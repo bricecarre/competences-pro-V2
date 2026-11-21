@@ -7798,8 +7798,8 @@ function teacherNotesPage(allowedClassIds){
   const values=assessments.filter(ev=>semester(ev)===sem).map(ev=>grade(st,ev)).filter(valid).map(Number);
   return values.length?(values.reduce((a,b)=>a+b,0)/values.length).toLocaleString('fr-FR',{maximumFractionDigits:2})+' / 20':'—';
  };
- const headings=ordered.map(ev=>'<th style="min-width:155px;padding:10px;background:var(--panel);position:sticky;top:0">'+
-  esc(ev.title||'Évaluation')+'<div class="muted small">'+esc(ev.date||'')+'</div>'+
+ const headings=ordered.map(ev=>'<th style="width:72px;min-width:72px;max-width:72px;padding:6px;background:var(--panel);position:sticky;top:0;vertical-align:bottom">'+
+  '<div data-notes-heading-vertical-v239="1" style="writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block;height:185px;max-height:185px;overflow:hidden;text-align:left;white-space:nowrap;vertical-align:middle" title="'+esc(ev.title||'Évaluation')+'">'+esc(ev.title||'Évaluation')+'</div><div class="muted small">'+esc(ev.date||'')+'</div>'+
   '<label class="muted small">Semestre <select class="input" style="padding:3px" data-notes-semester="'+esc(ev.id)+'" aria-label="Semestre de '+esc(ev.title||'Évaluation')+'">'+
   '<option value="1"'+(semester(ev)===1?' selected':'')+'>1</option><option value="2"'+(semester(ev)===2?' selected':'')+'>2</option></select></label></th>').join('');
  const table=assessments.length?
