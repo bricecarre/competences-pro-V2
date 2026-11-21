@@ -45,6 +45,12 @@ jobs:
           cp index.html site/index.html
           cp sauvegarde-en-ligne.html site/sauvegarde-en-ligne.html
           cp cloud-sync-v244.js site/cloud-sync-v244.js
+          # Bibliothèque Supabase servie localement : aucun CDN externe nécessaire au démarrage.
+          npm ci --no-audit --no-fund
+          npm install --no-save --package-lock=false --no-audit --no-fund @supabase/supabase-js@2.57.0
+          ./node_modules/.bin/esbuild node_modules/@supabase/supabase-js/dist/module/index.js --bundle --format=esm --platform=browser --target=es2020 --outfile=site/supabase-client.js
+          test -s site/supabase-client.js
+          node --check site/supabase-client.js
           test -s site/sauvegarde-en-ligne.html
           python3 - <<'PY'
           from pathlib import Path
@@ -59,6 +65,7 @@ jobs:
           PY
           node --check /tmp/cp-backup-uploader.mjs
           node --check site/cloud-sync-v244.js
+          grep -q "import('./supabase-client.js')" site/cloud-sync-v244.js
           grep -q 'loadedSections.has' site/cloud-sync-v244.js
           grep -q 'cp_pfmp_activity_entries' site/cloud-sync-v244.js
           python3 - <<'PY'
@@ -127,3 +134,30 @@ jobs:
       - name: Publier le site
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Vérifier le démarrage du site publié
+        shell: bash
+        env:
+          SITE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          set -euo pipefail
+          test -n "$SITE_URL"
+          for attempt in {1..12}; do
+            if curl --fail --silent --show-error --max-time 20 "$SITE_URL/supabase-client.js" -o /tmp/supabase-site.js && test -s /tmp/supabase-site.js; then
+              break
+            fi
+            sleep 5
+          done
+          test -s /tmp/supabase-site.js
+          command -v google-chrome
+          timeout 55s google-chrome --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=18000 --dump-dom "$SITE_URL" > /tmp/cp-dom.html 2>/tmp/cp-browser.log || {
+            tail -60 /tmp/cp-browser.log
+            exit 1
+          }
+          if ! grep -q 'cp-cloud-login-form' /tmp/cp-dom.html; then
+            echo "Echec : le formulaire de connexion n'apparaît pas dans le navigateur."
+            tail -60 /tmp/cp-browser.log
+            tail -c 2500 /tmp/cp-dom.html
+            exit 1
+          fi
+          echo 'OK : page publiée, bibliothèque locale chargée, formulaire de connexion visible.'
+
