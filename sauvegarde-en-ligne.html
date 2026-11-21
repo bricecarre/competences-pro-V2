@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Compétences Pro — Sauvegarde privée en ligne</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#1b293b;background:#eff4f9}*{box-sizing:border-box}
+body{margin:0;padding:18px}main{max-width:740px;margin:0 auto}
+h1{font-size:1.7rem;margin:12px 0}h2{font-size:1.15rem}p{line-height:1.5}
+.card{background:white;padding:20px;border-radius:15px;border:1px solid #d8e1ee;margin:14px 0}
+label{display:block;font-weight:600;margin:12px 0 5px}
+input{width:100%;padding:12px;border:1px solid #a8b8ca;border-radius:9px;font-size:16px}
+button{border:0;border-radius:9px;padding:12px 16px;background:#175d9b;color:white;font-weight:700;font-size:15px;cursor:pointer;margin:9px 7px 0 0}
+button.secondary{color:#175d9b;background:#e3edf7}button:disabled{opacity:.55;cursor:wait}
+[hidden]{display:none!important}
+.note{font-size:.9rem;color:#52677c}.warning{background:#fff6e4;border-left:4px solid #dc991f;padding:12px}
+#status{min-height:24px;white-space:pre-wrap;word-break:break-word}
+progress{width:100%;height:18px}
+summary{cursor:pointer;font-weight:700}.listitem{padding:10px 0;border-bottom:1px solid #e1e8f1}
+a{color:#135d9e}small{color:#4c6375}
+</style>
+</head>
+<body>
+<main>
+<a href="./">Retour à Compétences Pro</a>
+<h1>Sauvegarde privée en ligne</h1>
+<p>Ce module conserve une copie intégrale de ton export dans un espace privé Supabase. Il ne modifie ni les données du PC, ni celles du téléphone.</p>
+<div class="warning">Ne supprime aucune donnée de ton navigateur. Cette étape sécurise une copie en ligne ; la synchronisation automatique de Compétences Pro sera activée séparément, après vérification.</div>
+<section class="card" id="login">
+<h2>1. Compte pour la sauvegarde</h2>
+<p class="note">Utilise la même adresse e-mail et le même mot de passe sur tes différents appareils pour retrouver les sauvegardes. Ce compte Supabase est indépendant du compte professeur actuel.</p>
+<label for="email">Adresse e-mail</label><input type="email" id="email" autocomplete="email" required>
+<label for="password">Mot de passe pour cet espace</label><input type="password" id="password" autocomplete="current-password" minlength="10" required>
+<button id="sign-in">Se connecter</button>
+<button class="secondary" id="sign-up">Créer mon compte</button>
+<p class="note">À la première inscription, un e-mail de confirmation peut être nécessaire. Reviens ensuite sur cette page pour te connecter.</p>
+</section>
+<section class="card" id="main" hidden>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+<h2>2. Envoyer la sauvegarde du PC</h2><button id="sign-out" class="secondary">Déconnexion</button>
+</div>
+<p class="note" id="account"></p>
+<label for="backup-file">Choisis la sauvegarde JSON exportée depuis Compétences Pro</label>
+<input id="backup-file" type="file" accept=".json,application/json">
+<p class="note" id="file-summary">Le fichier peut dépasser 50 Mo : il sera envoyé en petits morceaux.</p>
+<button id="upload" disabled>Vérifier puis sauvegarder en ligne</button>
+<progress id="progress" max="100" value="0" hidden></progress>
+<p id="status" role="status" aria-live="polite"></p>
+</section>
+<section class="card" id="saved" hidden>
+<h2>3. Sauvegardes disponibles en ligne</h2>
+<p class="note">Les sauvegardes conservées ici sont privées. « Télécharger » permet de récupérer un fichier identique, après contrôle de son empreinte numérique.</p>
+<div id="backups"></div>
+<button class="secondary" id="refresh">Actualiser</button>
+</section>
+<p class="note">Espace privé individuel. Aucun fichier n'est publié dans le dépôt GitHub. Les mots de passe historiques contenus dans l'ancien export seront remplacés par une authentification sécurisée lors de la migration.</p>
+</main>
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.0';
+const sb=createClient('https://mzrcrehziqqraawxukia.supabase.co','sb_publishable_LrxIA_2Zpq3Y4P48uuchiQ_tnRZeBBl',{auth:{persistSession:true,autoRefreshToken:true}});
+const bucket='cp-private-backups',size=5*1024*1024;
+const el=id=>document.getElementById(id);
+let user=null,busy=false;
+function msg(t){el('status').textContent=t}
+function fmt(n){return (n/1048576).toLocaleString('fr-FR',{maximumFractionDigits:1})+' Mo'}
+function escapeText(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function setBusy(v){busy=v;el('upload').disabled=v||!el('backup-file').files.length;el('sign-in').disabled=v;el('sign-up').disabled=v}
+async function signed(){
+ const {data,error}=await sb.auth.getUser();
+ user=error?null:data.user;
+ el('login').hidden=!!user;el('main').hidden=!user;el('saved').hidden=!user;
+ if(user){el('account').textContent='Connecté : '+user.email;await listBackups();}
+}
+async function login(create){
+ const email=el('email').value.trim(),password=el('password').value;
+ if(!email||password.length<10){alert('Saisis une adresse e-mail et un mot de passe de 10 caractères minimum.');return}
+ try{
+  setBusy(true);
+  const {data,error}=create?await sb.auth.signUp({email,password}):await sb.auth.signInWithPassword({email,password});
+  if(error)throw error;
+  if(data.session)await signed();
+  else alert('Compte enregistré. Vérifie ton e-mail de confirmation, puis reviens te connecter.');
+ }catch(e){alert('Connexion : '+e.message)}finally{setBusy(false)}
+}
+el('sign-in').onclick=()=>login(false);
+el('sign-up').onclick=()=>login(true);
+el('sign-out').onclick=async()=>{await sb.auth.signOut();await signed()};
+el('backup-file').onchange=()=>{
+ const f=el('backup-file').files[0];
+ el('file-summary').textContent=f?f.name+' — '+fmt(f.size):'Aucun fichier sélectionné';
+ el('upload').disabled=!f||busy;msg('');
+};
+async function hash(blob){
+ const buff=await blob.arrayBuffer();
+ const digest=await crypto.subtle.digest('SHA-256',buff);
+ return [...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+async function checkFile(file){
+ if(!file.name.toLowerCase().endsWith('.json'))throw Error('Il faut une sauvegarde JSON.');
+ const j=JSON.parse(await file.text());
+ if(!Array.isArray(j.schools)||!Array.isArray(j.students)||!Array.isArray(j.evals))throw Error('Ce fichier ne ressemble pas à une sauvegarde Compétences Pro.');
+ if(j._cpBackup&&j._cpBackup.scope!=='school'&&j._cpBackup.scope!=='academy')throw Error('Portée de la sauvegarde non reconnue.');
+ return {
+  scope:j._cpBackup?.scope||'unknown',
+  school:j._cpBackup?.schoolName||j.schools[0]?.name||'',
+  exportedAt:j._cpBackup?.exportedAt||null,
+  counts:{schools:j.schools.length,classes:j.classes?.length||0,teachers:j.teachers?.length||0,students:j.students.length,evals:j.evals.length,results:j.results?.length||0,sequence:j.sequences?.length||0,pfmps:j.pfmps?.length||0}
+ };
+}
+async function listBackups(){
+ if(!user)return;
+ const {data,error}=await sb.from('cp_backup_manifests').select('id,created_at,status,original_filename,total_bytes,total_chunks,summary,object_prefix').eq('owner_id',user.id).order('created_at',{ascending:false}).limit(50);
+ if(error){el('backups').textContent=error.message;return}
+ el('backups').replaceChildren();
+ if(!data.length){el('backups').textContent='Aucune sauvegarde encore transférée.';return}
+ for(const b of data){
+  const item=document.createElement('div');item.className='listitem';
+  const info=document.createElement('div');
+  info.textContent=(b.status==='ready'?'✓ Sauvegardée':b.status==='uploading'?'⏳ Incomplète':'État : '+b.status)+' — '+(b.original_filename||b.id)+' — '+fmt(b.total_bytes||0);
+  item.append(info);
+  const small=document.createElement('small');small.textContent=new Date(b.created_at).toLocaleString('fr-FR');item.append(small);
+  if(b.status==='ready'){
+   const btn=document.createElement('button');btn.className='secondary';btn.textContent='Télécharger et vérifier';
+   btn.onclick=()=>download(b,btn);item.append(btn);
+  }
+  el('backups').append(item);
+ }
+}
+async function upload(){
+ const file=el('backup-file').files[0];
+ if(!file||!user||busy)return;
+ setBusy(true);el('progress').hidden=false;el('progress').value=0;
+ try{
+  msg('Vérification de la structure du fichier…');
+  const summary=await checkFile(file);
+  msg('Calcul de l’empreinte SHA-256…');
+  const digest=await hash(file);
+  const total=Math.ceil(file.size/size);
+  if(total>2048)throw Error('Fichier trop volumineux');
+  const {data:prev,error:prevErr}=await sb.from('cp_backup_manifests').select('*').eq('owner_id',user.id).order('created_at',{ascending:false}).limit(100);
+  if(prevErr)throw prevErr;
+  const same=prev.find(b=>b.summary?.sha256_raw===digest&&b.total_bytes===file.size&&b.status==='ready');
+  if(same){msg('Cette sauvegarde est déjà présente en ligne et vérifiée. Aucun doublon créé.');return}
+  const resume=prev.find(b=>b.summary?.sha256_raw===digest&&b.total_bytes===file.size&&b.status==='uploading');
+  const id=resume?.id||crypto.randomUUID();
+  const prefix=user.id+'/'+id+'/';
+  if(!resume){
+   const {error}=await sb.from('cp_backup_manifests').insert({
+    id,owner_id:user.id,source_device:'PC',origin:'browser-export',original_filename:file.name,
+    captured_at:summary.exportedAt||null,total_bytes:file.size,total_chunks:total,status:'uploading',
+    summary:{...summary,sha256_raw:digest},object_prefix:prefix
+   });if(error)throw error;
+  }
+  const {data:present,error:listErr}=await sb.storage.from(bucket).list(prefix,{limit:100});
+  if(listErr)throw listErr;
+  const existing=new Map((present||[]).map(x=>[x.name,Number(x.metadata?.size)]));
+  for(let i=0;i<total;i++){
+   const name='part-'+String(i).padStart(4,'0')+'.bin';
+   const part=file.slice(i*size,Math.min(file.size,(i+1)*size));
+   if(existing.get(name)!==part.size){
+    msg('Transfert sécurisé : morceau '+(i+1)+' / '+total+'…');
+    const {error}=await sb.storage.from(bucket).upload(prefix+name,part,{contentType:'application/octet-stream',upsert:true,cacheControl:'0'});
+    if(error)throw new Error('Morceau '+(i+1)+' : '+error.message);
+   }
+   el('progress').value=Math.round(100*(i+1)/total);
+  }
+  msg('Vérification des morceaux présents sur le serveur…');
+  const {data:remote,error:re}=await sb.storage.from(bucket).list(prefix,{limit:100});
+  if(re)throw re;
+  for(let i=0;i<total;i++){
+   const name='part-'+String(i).padStart(4,'0')+'.bin',expected=Math.min(size,file.size-i*size);
+   const obj=remote.find(x=>x.name===name);
+   if(!obj||Number(obj.metadata?.size)!==expected)throw Error('Le morceau '+(i+1)+' n’est pas confirmé sur le serveur.');
+  }
+  const {error:upErr}=await sb.from('cp_backup_manifests').update({status:'ready',updated_at:new Date().toISOString()}).eq('owner_id',user.id).eq('id',id);
+  if(upErr)throw upErr;
+  msg('✓ Sauvegarde complète en ligne : '+fmt(file.size)+', '+total+' morceaux. Empreinte : '+digest+'.');
+  await listBackups();
+ }catch(e){msg('Transfert non terminé : '+e.message+'. Tu peux relancer avec le même fichier sans écraser de données.')}finally{setBusy(false)}
+}
+async function download(b,btn){
+ if(!user||busy)return;
+ btn.disabled=true;let parts=[];
+ try{
+  msg('Téléchargement et vérification de la sauvegarde…');
+  for(let i=0;i<b.total_chunks;i++){
+   const name='part-'+String(i).padStart(4,'0')+'.bin';
+   const {data,error}=await sb.storage.from(bucket).download(b.object_prefix+name);
+   if(error)throw error;
+   parts.push(data);msg('Téléchargement : '+(i+1)+' / '+b.total_chunks);
+  }
+  const file=new Blob(parts,{type:'application/json'});
+  if(file.size!==b.total_bytes)throw Error('Taille inattendue : fichier non délivré');
+  const digest=await hash(file);
+  if(digest!==b.summary?.sha256_raw)throw Error('Empreinte différente : fichier non délivré');
+  const url=URL.createObjectURL(file);
+  const a=document.createElement('a');a.href=url;a.download=b.original_filename||'competences-pro-sauvegarde.json';document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
+  msg('✓ Sauvegarde téléchargée et vérifiée (SHA-256 identique).');
+ }catch(e){msg('Erreur de restauration : '+e.message)}finally{btn.disabled=false;parts=[]}
+}
+el('upload').onclick=upload;
+el('refresh').onclick=listBackups;
+sb.auth.onAuthStateChange(()=>{signed().catch(e=>msg(e.message))});
+signed().catch(e=>msg(e.message));
+</script>
+</body></html>
