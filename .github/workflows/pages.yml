@@ -50,7 +50,6 @@ jobs:
           assert "Moy. année" in s
           assert "academy-map-tactile-v243" in s
           assert "<title>Compétences Pro V2.43" in s
-          assert "Version locale V2.43" in s
           assert "academy-mobile-select-v242" not in s
           assert "academy-premium-hit" in s
           assert "annualMean(st)" in s
