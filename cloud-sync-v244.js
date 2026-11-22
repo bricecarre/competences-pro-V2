@@ -254,6 +254,15 @@ window.cpCloudAddPfmpActivity=async(studentId,pfmpId,date,content)=>{
  if(error)throw error;
  return data;
 };
+window.cpCloudGetClassRoster=async className=>{
+ if(!user||!sb||!active)throw Error('Session cloud indisponible.');
+ const {data,error}=await sb.from('cp_roster_recovery')
+  .select('class_name,roster,source,updated_at')
+  .eq('owner_id',user.id).eq('class_name',String(className)).maybeSingle();
+ if(error)throw error;
+ if(!data||!Array.isArray(data.roster))throw Error('Liste de référence introuvable.');
+ return data;
+};
 window.cpCloudListen=cb=>{onRemote=cb};
 window.cpCloudReady=false;
 window.addEventListener('beforeunload',e=>{
