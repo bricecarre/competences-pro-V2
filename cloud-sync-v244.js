@@ -237,21 +237,36 @@ window.cpCloudListPfmpActivities=async(studentId,pfmpId)=>{
  if(!user||!sb)throw Error('Session Supabase non disponible.');
  if(!studentId||!pfmpId)throw Error('Profil élève ou PFMP manquant.');
  const {data,error}=await sb.from('cp_pfmp_activity_entries')
-  .select('id,student_id,pfmp_id,activity_date,activity_text,created_at,validation_status,tutor_comment,reviewed_at')
+  .select('id,student_id,pfmp_id,activity_date,activity_end_date,activity_text,created_at,validation_status,tutor_comment,reviewed_at,competency_codes')
   .eq('owner_id',user.id).eq('student_id',String(studentId)).eq('pfmp_id',String(pfmpId))
   .order('activity_date',{ascending:true}).order('created_at',{ascending:true}).limit(500);
  if(error)throw error;
  return data||[];
 };
-window.cpCloudAddPfmpActivity=async(studentId,pfmpId,date,content)=>{
+window.cpCloudAddPfmpActivity=async(studentId,pfmpId,date,content,endDate=date)=>{
  if(!user||!sb)throw Error('Session Supabase non disponible.');
  const text=String(content||'').trim();
  if(!studentId||!pfmpId||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(date))throw Error('Date, élève ou PFMP non valide.');
  if(!text||text.length>5000)throw Error('Saisis une activité de 1 à 5 000 caractères.');
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(endDate)||endDate<date)throw Error('La date de fin doit être égale ou postérieure à la date de début.');
  const {data,error}=await sb.from('cp_pfmp_activity_entries')
-  .insert({owner_id:user.id,student_id:String(studentId),pfmp_id:String(pfmpId),activity_date:date,activity_text:text})
-  .select('id,activity_date,activity_text,created_at,validation_status').single();
+  .insert({owner_id:user.id,student_id:String(studentId),pfmp_id:String(pfmpId),activity_date:date,activity_end_date:endDate,activity_text:text})
+  .select('id,activity_date,activity_end_date,activity_text,created_at,validation_status').single();
  if(error)throw error;
+ return data;
+};
+window.cpCloudUpdatePfmpActivity=async(id,startDate,text,endDate=startDate)=>{
+ if(!user||!sb)throw Error('Session Supabase non disponible.');
+ text=String(text||'').trim();
+ const valid=v=>/^\\d{4}-\\d{2}-\\d{2}$/.test(v);
+ if(!id||!valid(startDate)||!valid(endDate)||endDate<startDate)throw Error('Dates de début et de fin incorrectes.');
+ if(!text||text.length>5000)throw Error('Décris l’activité (1 à 5 000 caractères).');
+ const {data,error}=await sb.from('cp_pfmp_activity_entries')
+  .update({activity_date:startDate,activity_end_date:endDate,activity_text:text})
+  .eq('owner_id',user.id).eq('id',String(id)).neq('validation_status','confirmed')
+  .select('id,activity_date,activity_end_date,activity_text').maybeSingle();
+ if(error)throw error;
+ if(!data)throw Error('Activité introuvable ou déjà validée.');
  return data;
 };
 window.cpCloudGetClassRoster=async className=>{
