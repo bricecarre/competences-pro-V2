@@ -60,6 +60,7 @@ jobs:
           cp student-archives-v257.js site/student-archives-v257.js
           cp pfmp-weekly-v258.js site/pfmp-weekly-v258.js
           node --check site/pfmp-weekly-v258.js
+          python3 scripts/test_pfmp_weekly_ui_v263.py
           node --check site/student-archives-v257.js
           node --check site/roster-recovery-v255.js
           grep -q "cpCloudGetClassRoster" site/cloud-sync-v244.js
