@@ -29,6 +29,62 @@ function levels(){
  }catch(_){}
  return ['Non acquis','En cours d’acquisition','Acquis','Maîtrisé'];
 }
+// V2.66 — le bilan est une synthèse des évaluations enregistrées par activité,
+// jamais une seconde évaluation indépendante de la PFMP.
+function stageSummary(entries,assessments,catalog){
+ const root=document.createElement('section');
+ root.className='cp-v266-stage-summary';
+ root.style.cssText='padding:14px;margin:15px 0;border:1px solid var(--line,#9996);border-radius:10px;';
+ const title=document.createElement('h3');title.textContent='Bilan global des compétences travaillées en entreprise';root.appendChild(title);
+ const description=document.createElement('p');description.className='muted small';
+ description.textContent='Synthèse automatique des activités évaluées par le professeur. Les activités en attente de validation sont distinguées des activités validées.';
+ root.appendChild(description);
+ const confirmed=new Set(entries.filter(e=>e.validation_status==='confirmed').map(e=>String(e.id)));
+ const pending=entries.filter(e=>e.validation_status!=='confirmed').length;
+ const summary=document.createElement('p');summary.className='cp-v266-stage-count';
+ summary.textContent=entries.length+' activité(s) saisie(s) · '+confirmed.size+' validée(s) · '+pending+' en attente.';
+ root.appendChild(summary);
+ const grouped=new Map();
+ for(const result of assessments){
+  if(!confirmed.has(String(result.activity_id)))continue;
+  const code=String(result.competency_code);
+  if(!grouped.has(code))grouped.set(code,[]);
+  grouped.get(code).push(result);
+ }
+ const subtitle=document.createElement('p');
+ subtitle.textContent=grouped.size+' compétence(s) différente(s) évaluée(s) dans les activités validées.';
+ root.appendChild(subtitle);
+ const list=document.createElement('div');list.className='cp-v266-competency-list';list.style.cssText='display:grid;gap:9px;';
+ const labels=new Map(catalog.map(c=>[c.code,c.label]));
+ if(!grouped.size){
+  const empty=document.createElement('p');empty.className='muted small';
+  empty.textContent='Aucune compétence encore évaluée dans une activité validée.';
+  list.appendChild(empty);
+ }
+ for(const [code,records] of [...grouped.entries()].sort(([a],[b])=>a.localeCompare(b,'fr'))){
+  const line=document.createElement('div');line.className='cp-v266-competency';
+  line.style.cssText='padding:10px;border:1px solid var(--line,#9995);border-radius:8px;';
+  const label=document.createElement('strong');
+  label.textContent=code+' — '+(labels.get(code)||code);line.appendChild(label);
+  const levels=[...new Set(records.map(r=>String(r.mastery_level||'Non évaluée')))];
+  const detail=document.createElement('div');detail.className='muted small';
+  detail.textContent='Évaluée dans '+records.length+' activité(s) · Niveau'+(levels.length===1?'':'x')+' : '+levels.join(', ');
+  line.appendChild(detail);
+  const grades=records.map(r=>r.grade).filter(g=>g!==null&&g!==undefined&&Number.isFinite(Number(g))).map(Number);
+  if(grades.length){
+   const g=document.createElement('div');g.className='muted small';
+   const mean=grades.reduce((a,b)=>a+b,0)/grades.length;
+   g.textContent='Moyenne des notes saisies : '+mean.toLocaleString('fr-FR',{maximumFractionDigits:2})+'/20 ('+grades.length+' note(s))';
+   line.appendChild(g);
+  }
+  list.appendChild(line);
+ }
+ root.appendChild(list);
+ const annotation=document.createElement('p');annotation.className='muted small';
+ annotation.textContent='Ce bilan n’attribue pas une nouvelle note de stage et ne modifie aucune évaluation : il réunit celles des activités validées.';
+ annotation.style.marginTop='10px';root.appendChild(annotation);
+ return root;
+}
 async function show(studentId,pfmpId,zoneId){
  const zone=document.getElementById(zoneId);
  if(!zone||!roleOK()||!canSeeStudent(studentId))return;
@@ -49,27 +105,31 @@ async function show(studentId,pfmpId,zoneId){
    groups.get(key).push(a);
    return groups;
   },new Map()));
-  zone.innerHTML='<h3>Activités réalisées en entreprise</h3>'
-   +'<p class="muted small">Pour chaque activité, associez les compétences du référentiel, évaluez-les, puis validez l’activité. Le tuteur sera traité ultérieurement.</p>'
-   +'<p class="muted small cp-v265-summary"></p><div class="cp-v265-activity-list"></div>';
+  zone.innerHTML='<h3>Carnet des activités de la PFMP</h3>'
+   +'<p class="muted small">Chaque saisie de l’élève apparaît séparément. Ouvrez une activité pour lui associer des compétences et l’évaluer.</p>'
+   +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button type="button" class="btn cp-v266-refresh">Actualiser les activités</button><button type="button" class="btn cp-v266-go-summary">Voir le bilan global des compétences</button></div>'
+   +'<p class="muted small cp-v265-summary"></p><div class="cp-v265-activity-list"></div><div class="cp-v266-summary-anchor"></div>';
+  zone.querySelector('.cp-v266-refresh').onclick=()=>show(studentId,pfmpId,zoneId);
+  zone.querySelector('.cp-v266-go-summary').onclick=()=>zone.querySelector('.cp-v266-stage-summary')?.scrollIntoView({block:'start',behavior:'smooth'});
+  zone.querySelector('.cp-v266-summary-anchor').appendChild(stageSummary(entries,assessments,catalog));
   const summary=zone.querySelector('.cp-v265-summary');
   summary.textContent=entries.length+' activité(s), '+entries.filter(e=>e.validation_status==='confirmed').length+' validée(s) par le professeur.';
   const root=zone.querySelector('.cp-v265-activity-list');
-  if(!entries.length){root.textContent='Aucune activité renseignée par cet élève pour cette PFMP.';return;}
+  if(!entries.length){root.textContent='Aucune activité renseignée par cet élève dans cette PFMP. Vérifiez la période de stage sélectionnée.';return;}
   for(const entry of entries){
    const saved=byId.get(String(entry.id))||[];
    const card=document.createElement('section');card.className='card cp-v265-activity';
    card.style.cssText='padding:14px;margin:12px 0;';
    const heading=document.createElement('div');
    heading.style.cssText='display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:start;';
-   heading.innerHTML='<strong>'+esc(dateFr(entry.activity_date))
+   heading.innerHTML='<strong>Activité '+String(entries.indexOf(entry)+1)+' · '+esc(dateFr(entry.activity_date))
     +(entry.activity_end_date&&entry.activity_end_date!==entry.activity_date?' au '+esc(dateFr(entry.activity_end_date)):'')
     +'</strong><span class="cp-v265-state">'+(entry.validation_status==='confirmed'?'Validée par le professeur':'À évaluer')+'</span>';
    card.appendChild(heading);
    const desc=document.createElement('p');
    desc.style.cssText='white-space:pre-wrap;overflow-wrap:anywhere;margin:9px 0;';
    desc.textContent=entry.activity_text||'';card.appendChild(desc);
-   const skillHeading=document.createElement('strong');skillHeading.textContent='Compétences évaluées';card.appendChild(skillHeading);
+   const skillHeading=document.createElement('strong');skillHeading.textContent='Évaluation de cette activité';card.appendChild(skillHeading);
    const rows=document.createElement('div');rows.className='cp-v265-rows';rows.style.cssText='margin:8px 0;display:grid;gap:8px;';
    card.appendChild(rows);
    const notice=document.createElement('p');notice.className='muted small cp-v265-notice';notice.setAttribute('role','status');
