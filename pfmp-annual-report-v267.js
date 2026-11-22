@@ -2,7 +2,6 @@
    Affichage seulement : ne crée aucune note scolaire et ne modifie aucune donnée. */
 (function(){
 'use strict';
-const html=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;':'&quot;','\'':'&#39;'}[c]));
 const formatGrade=n=>Number(n).toLocaleString('fr-FR',{maximumFractionDigits:2})+' / 20';
 const validGrade=n=>n!==null&&n!==undefined&&n!==''&&Number.isFinite(Number(n))&&Number(n)>=0&&Number(n)<=20;
 const isConfirmed=e=>e.validation_status==='confirmed';
