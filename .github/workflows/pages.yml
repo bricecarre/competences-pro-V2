@@ -50,11 +50,14 @@ jobs:
           python3 scripts/patch_archive_safe_v257.py index.html
           python3 scripts/patch_pfmp_period_v257.py index.html
           python3 scripts/patch_archives_ui_v257.py index.html
+          python3 scripts/patch_pfmp_weekly_v258.py index.html
           cp index.html site/index.html
           cp sauvegarde-en-ligne.html site/sauvegarde-en-ligne.html
           cp cloud-sync-v244.js site/cloud-sync-v244.js
           cp roster-recovery-v255.js site/roster-recovery-v255.js
           cp student-archives-v257.js site/student-archives-v257.js
+          cp pfmp-weekly-v258.js site/pfmp-weekly-v258.js
+          node --check site/pfmp-weekly-v258.js
           node --check site/student-archives-v257.js
           node --check site/roster-recovery-v255.js
           grep -q "cpCloudGetClassRoster" site/cloud-sync-v244.js
@@ -81,6 +84,7 @@ jobs:
           grep -q "import('./supabase-client.js')" site/cloud-sync-v244.js
           grep -q 'loadedSections.has' site/cloud-sync-v244.js
           grep -q 'cp_pfmp_activity_entries' site/cloud-sync-v244.js
+          grep -q 'activity_end_date' site/cloud-sync-v244.js
           python3 - <<'PY'
           from pathlib import Path
           import re
@@ -105,10 +109,11 @@ jobs:
           assert 'data-s="pfmp"><span class="mobile-nav-icon">🏭</span><span class="mobile-nav-label">Mes PFMP' in s
           assert "data-cp-lazy-v248" in s
           assert "data-cp-student-repair-v252" in s
-          assert "data-cp-school-class-scope-v253" in s
+          assert "data-cp-school-class-scope-v253" not in s
           assert "data-cp-teacher-assigned-only-v256" in s
           assert "data-cp-archive-safe-v257" in s
           assert "data-cp-pfmp-period-v257" in s
+          assert '<script src="pfmp-weekly-v258.js"></script>' in s
           assert '<script src="student-archives-v257.js"></script>' in s
           assert "data-cp-repeaters-v254" in s
           assert '<script src="roster-recovery-v255.js"></script>' in s
@@ -139,7 +144,7 @@ jobs:
           assert "filter(code=>String(code||'').trim().length>0)" in s
           scripts=re.findall(r'<script[^>]*>(.*?)</script>',s,re.S|re.I)
           assert scripts, "Script application absent"
-          Path('/tmp/competences-pro-validation.js').write_text(scripts[-1],encoding='utf-8')
+          Path('/tmp/competences-pro-validation.js').write_text(max(scripts,key=len),encoding='utf-8')
           print('V2.44: moteur de données en ligne et carte tactile validés')
           PY
           node --check /tmp/competences-pro-validation.js
