@@ -42,15 +42,7 @@ jobs:
           python3 scripts/patch_lazy_student_v248.py index.html
           python3 scripts/patch_student_pfmp_v249.py index.html
           python3 scripts/patch_pfmp_journal_v250.py index.html
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          s=Path('index.html').read_text(encoding='utf-8')
-          for term in ['function login(', 'function student(', 'function timelineForStudent(', 'function listStudents(', 'function classDetail(', 'function classReferentialKey(', 'function studentFormationProgressHtml(', 'function studentProgressDetails(', 'function normalizeDataShape(', 'function studentReferentialData(', 'function render(', 'function teacher(', 'function studentMobilePage(', 'function studentTimeline(', 'function classes(', 'function students(', 'function shell(', 'classId', 'data.students.filter(', 'data.classes.filter(']:
-            print('CP_DIAG_TERM',repr(term),'COUNT',s.count(term))
-            p=s.find(term)
-            if p>=0: print('CP_DIAG_BEGIN',repr(term),s[max(0,p-220):p+8500].replace('\\n','\\\\n'),'CP_DIAG_END')
-          PY
+          python3 scripts/patch_student_repair_v252.py index.html
           cp index.html site/index.html
           cp sauvegarde-en-ligne.html site/sauvegarde-en-ligne.html
           cp cloud-sync-v244.js site/cloud-sync-v244.js
@@ -100,6 +92,7 @@ jobs:
           assert "if(section==='pfmp'||section==='mobilepfmp')" in s
           assert 'data-s="pfmp"><span class="mobile-nav-icon">🏭</span><span class="mobile-nav-label">Mes PFMP' in s
           assert "data-cp-lazy-v248" in s
+          assert "data-cp-student-repair-v252" in s
           assert "cpCloudEnsureSequences" in s
           assert "['notes','Mes notes']" not in s
           assert 'data-s="notes"><span class="mobile-nav-icon"' not in s
@@ -131,7 +124,7 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add index.html
-            git commit -m "Publier V2.50 : carnet PFMP élève et consultation par le professeur"
+            git commit -m "Publier V2.52 : frise et restauration élèves archivés"
             git push origin HEAD:main
           fi
       - name: Configurer GitHub Pages
