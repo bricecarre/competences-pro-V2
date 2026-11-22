@@ -26,14 +26,14 @@ old='function pfmpEvaluationStudentDetail(pfmpId,studentId){'
 assert s.count(old)==1,'Detail function missing'
 new="""function pfmpEvaluationStudentDetail(pfmpId,studentId){
  // data-cp-stage-summary-v266 : une seule source pédagogique, le carnet.
- const p=(data.pfmps||[]).find(x=>x.id===pfmpId);
- const s=data.students.find(x=>x.id===studentId);
- if(!p||!s)return alert('Dossier PFMP introuvable.');
- modal('<div class="titlebar"><div><h2>'+esc(p.label||'PFMP')+' · '+esc(name(s))+
+ const activityPfmp=(data.pfmps||[]).find(x=>x.id===pfmpId);
+ const activityStudent=data.students.find(x=>x.id===studentId);
+ if(!activityPfmp||!activityStudent)return alert('Dossier PFMP introuvable.');
+ modal('<div class="titlebar"><div><h2>'+esc(activityPfmp.label||'PFMP')+' · '+esc(name(activityStudent))+
    '</h2><div class="muted">Activités réalisées et bilan des compétences évaluées</div></div>'+
    '<button class="btn close">Fermer</button></div>'+
    '<div class="card" id="cp-pfmp-student-evaluation-diary-v250" style="margin-top:12px"></div>');
- cpPfmpTeacherDiary(s.id,p.id,'cp-pfmp-student-evaluation-diary-v250');
+ cpPfmpTeacherDiary(activityStudent.id,activityPfmp.id,'cp-pfmp-student-evaluation-diary-v250');
  return;
 """
 s=s.replace(old,new,1)
