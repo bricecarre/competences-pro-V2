@@ -4434,7 +4434,8 @@ function studentBilan(studentId){
  <div class="card" style="margin-bottom:12px"><div class="titlebar"><div><h2>Progression globale : ${progressInfo.globalPct}%</h2><div class="muted">${progressInfo.globalDone}/${progressInfo.globalTotal} items uniques rencontrés depuis ${esc(pathLabelForReferential(classReferentialKey(c),1))} jusqu’à l’année actuelle, PFMP comprises.</div></div><button class="btn" id="openTimeline">Ouvrir la frise</button></div><div class="progress"><div class="bar" style="width:${progressInfo.globalPct}%"></div></div><div class="muted small" style="margin-top:7px">${esc(pathLabelForReferential(classReferentialKey(c),progressInfo.currentYear))} : <b>${currentProgress.pct}%</b> · ${currentProgress.done}/${currentProgress.total} items évalués pendant l’année en cours.</div></div>
  <div class="card" style="margin-bottom:12px"><h2>Parcours scolaire</h2>${s.history.map(h=>`<div class="tag">${esc(h)}</div>`).join('')}<h2 style="margin-top:18px">Dernières évaluations</h2>${data.results.filter(r=>r.student===s.id).slice(-6).reverse().map(r=>`<button class="check" data-eval-bilan="${r.eval}" style="width:100%;color:inherit;border:0;text-align:left"><b>${r.subcomp||r.comp}</b><span class="grow">${esc(data.evals.find(v=>v.id===r.eval)?.title||'Évaluation')}</span><span class="eval-grade-display">${formatGrade(effectiveEvalGrade(r.eval,s.id))}</span>${statusPill(r.status)}</button>`).join('')||'<p class="muted">Aucune évaluation.</p>'}</div>
  <div class="card" style="margin-bottom:12px"><h2>Évaluations PFMP</h2>${studentEvaluatedPfmps(s.id).map(p=>{const a=pfmpEvalStats(p.id,s.id,'teacher'),b=pfmpEvalStats(p.id,s.id,'tutor'),refKey=studentReferentialData(s.id).key;return `<div class="check"><b>${esc(p.label||'PFMP')}</b><span class="grow">${esc(pathLabelForReferential(refKey,p.trainingYear))} · ${esc(referentialShortLabel(refKey))}</span><span class="tag">Professeur ${a.pct}%</span><span class="tag">Tuteur ${b.pct}%</span></div>`}).join('')||'<p class="muted">Aucune PFMP évaluée pour cet élève.</p>'}</div>
- ${classReferentialKey(c)===REFERENTIAL_BAC_TCI
+ <section class="card" data-cp-annual-pfmp-report="teacher" data-student-id="${esc(s.id)}" style="margin-bottom:12px"><h2>PFMP — bilan annuel des activités</h2><p class="muted small">Chargement des compétences validées en entreprise…</p></section>
+  ${classReferentialKey(c)===REFERENTIAL_BAC_TCI
    ? `<div class="card" style="margin-bottom:12px"><h2>Unités certificatives du Bac Pro TCI</h2>${unitCardsForStudent(s.id)}</div>`
    : (classReferentialKey(c)===REFERENTIAL_CAP_RICS&&studentTrainingYear(s.id)===2
       ? `<div class="card" style="margin-bottom:12px"><h2>Épreuves certificatives du CAP RICS</h2>${capUnitCardsForStudent(s.id)}</div>`
@@ -10134,7 +10135,7 @@ function student(){
      <div><b>Édité le</b>${new Date().toLocaleDateString('fr-FR')}</div>
    </div>
  </section>`+
- schoolBanner(studentSchool,`${studentClass?.level||''} · ${studentClass?.name||''}`)+
+ '<section class="card" data-cp-annual-pfmp-report="student" data-student-id="'+esc(s.id)+'" style="margin-bottom:12px"><h2>PFMP — bilan annuel des activités</h2><p class="muted small">Chargement des compétences validées en entreprise…</p></section>'+schoolBanner(studentSchool,`${studentClass?.level||''} · ${studentClass?.name||''}`)+
  `<div class="card radar-wrap" style="margin-bottom:12px">${radarSvg(radarVals,ref.comps,'Profil de compétences',radarDetails)}<div class="radar-note">Échelle 0 à 4. Progression visible dès les premières évaluations. Le statut officiel demande toujours 50 % des items évalués.</div></div>
  ${gradeAveragesPanel(s.id,true)}
  <div class="card student-report-core" style="margin-bottom:12px"><h2>Progression de la formation</h2><div class="double-progress">
@@ -10446,4 +10447,5 @@ bootstrapApp();
 <script src="student-archives-v257.js"></script>
 <script src="pfmp-weekly-v258.js"></script>
 <script src="pfmp-teacher-activity-v265.js"></script>
+<script src="pfmp-annual-report-v267.js"></script>
 </body></html>
