@@ -7908,6 +7908,10 @@ async function cpPfmpStudentDiary(studentId){
  }
 }
 async function cpPfmpTeacherDiary(studentId,pfmpId,zoneId){
+ // data-cp-pfmp-activity-eval-v265
+ if(typeof window.cpPfmpTeacherActivityReview==='function'){
+  return window.cpPfmpTeacherActivityReview(studentId,pfmpId,zoneId);
+ }
  const zone=document.getElementById(zoneId);
  if(!zone)return;
  zone.textContent='Chargement des activités saisies par l’élève…';
@@ -10430,4 +10434,5 @@ bootstrapApp();
 </script><script src="roster-recovery-v255.js"></script>
 <script src="student-archives-v257.js"></script>
 <script src="pfmp-weekly-v258.js"></script>
+<script src="pfmp-teacher-activity-v265.js"></script>
 </body></html>
