@@ -11,7 +11,8 @@ function context(){
   if(typeof data==='undefined'||!Array.isArray(data.students)||!Array.isArray(data.classes))return null;
   const teacher=session.role==='teacher'?data.teachers.find(t=>t.id===session.user):null;
   const schoolId=teacher?.schoolId||((data.schools||[]).length===1?data.schools[0].id:null);
-  const matches=data.classes.filter(c=>canon(c.name)==='1tci1'&&(!schoolId||c.schoolId===schoolId));
+  const matches=data.classes.filter(c=>canon(c.name)==='1tci1'&&(!schoolId||c.schoolId===schoolId)&&
+    (session.role==='admin'||(teacher&&Array.isArray(c.teachers)&&c.teachers.some(id=>String(id)===String(teacher.id)))));
   return matches.length===1?{cls:matches[0],school:data.schools.find(s=>s.id===matches[0].schoolId)}:null;
  }catch(_){return null}
 }
