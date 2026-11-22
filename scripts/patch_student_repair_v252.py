@@ -66,4 +66,23 @@ new="""    bindCrud('student',filter);
 assert s.count(old)>=1,"liaison listes élèves introuvable"
 s=s.replace(old,new,1)
 p.write_text(s,encoding='utf-8')
+print("V2.52 : séquences chargées pour élèves et fiches archivées réactivables")anchor="document.querySelectorAll('.eval').forEach"
+a=s.index("function listStudents(")
+b=s.find("\\nfunction ",a+10)
+if b<0:b=len(s)
+part=s[a:b]
+assert anchor in part,"boutons d'évaluation de la liste introuvables"
+hook="""document.querySelectorAll('.cp-v252-reactivate').forEach(b=>b.onclick=()=>{
+      if(!['admin','teacher'].includes(session?.role))return;
+      const student=data.students.find(x=>String(x.id)===String(b.dataset.id));
+      if(!student||!student.archived)return;
+      if(!confirm('Réactiver la fiche de '+name(student)+' ?'))return;
+      student.archived=false;
+      save();
+      render();
+    });
+    """
+part=part.replace(anchor,hook+anchor,1)
+s=s[:a]+part+s[b:]
+p.write_text(s,encoding='utf-8')
 print("V2.52 : séquences chargées pour élèves et fiches archivées réactivables")
