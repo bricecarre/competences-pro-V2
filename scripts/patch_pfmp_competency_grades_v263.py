@@ -24,6 +24,7 @@ block=block.replace(old,new,1)
 point=block.find("const x={...old,pfmpId:p.id,pfmpTrainingYear:selectedYear")
 assert point>=0,'Enregistrement statut PFMP absent'
 closing=block.find('\n  };',point)
+print('CP_GRADE_END_DIAG',point,closing,repr(block[point:point+1050]))
 assert 0<closing-point<1200,'Fin du rendu PFMP introuvable'
 insertion="""
     // data-cp-pfmp-grade-v263 : note facultative /20 distincte du niveau de maîtrise.
