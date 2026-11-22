@@ -284,6 +284,46 @@ window.cpCloudDeletePfmpActivity=async id=>{
  if(!data)throw Error('Activité absente ou déjà validée par le tuteur.');
  return data;
 };
+// V2.65 : résultats propres à chaque activité de PFMP.
+window.cpCloudListPfmpActivityAssessments=async(studentId,pfmpId)=>{
+ if(!user||!sb)throw Error('Session Supabase indisponible.');
+ const {data,error}=await sb.from('cp_pfmp_activity_assessments')
+  .select('activity_id,student_id,pfmp_id,competency_code,mastery_level,grade,teacher_id,updated_at')
+  .eq('owner_id',user.id).eq('student_id',String(studentId)).eq('pfmp_id',String(pfmpId))
+  .order('competency_code',{ascending:true}).limit(500);
+ if(error)throw error;
+ return data||[];
+};
+window.cpCloudReviewPfmpActivity=async(studentId,pfmpId,activityId,reviews,confirmed)=>{
+ if(!user||!sb)throw Error('Session Supabase indisponible.');
+ if(typeof session==='undefined'||!['teacher','admin'].includes(session?.role))throw Error('Accès réservé au professeur.');
+ const student=data.students?.find(s=>String(s.id)===String(studentId));
+ const cls=data.classes?.find(c=>String(c.id)===String(student?.classId));
+ if(!student||!cls)throw Error('Dossier élève introuvable.');
+ if(session.role==='teacher'){
+  const teacher=data.teachers?.find(t=>String(t.id)===String(session.user));
+  if(!teacher||(cls.teachers||[]).every(id=>String(id)!==String(teacher.id)))
+   throw Error('Cette classe ne vous est pas attribuée.');
+ }
+ const pfmp=data.pfmps?.find(p=>String(p.id)===String(pfmpId));
+ if(!pfmp)throw Error('PFMP introuvable.');
+ if(!Array.isArray(reviews))throw Error('Liste de compétences incorrecte.');
+ const allowed=new Set(studentReferentialData(studentId)?.comps||[]);
+ const clean=reviews.map(r=>({
+  code:String(r.code||'').trim(),mastery:String(r.mastery||'').trim(),
+  grade:r.grade===null||r.grade===undefined||r.grade===''?null:Number(r.grade)
+ }));
+ if(clean.some(r=>!allowed.has(r.code)||!r.mastery||
+   (r.grade!==null&&(!Number.isFinite(r.grade)||r.grade<0||r.grade>20))))
+  throw Error('Vérifie les compétences, les niveaux de maîtrise et les notes /20.');
+ if(new Set(clean.map(r=>r.code)).size!==clean.length)throw Error('Une compétence figure plusieurs fois.');
+ const {error}=await sb.rpc('cp_pfmp_review_activity',{
+  p_activity_id:String(activityId),p_student_id:String(studentId),p_pfmp_id:String(pfmpId),
+  p_teacher_id:String(session.user),p_reviews:clean,p_confirm:!!confirmed
+ });
+ if(error)throw error;
+ return true;
+};
 window.cpCloudGetClassRoster=async className=>{
  if(!user||!sb||!active)throw Error('Session cloud indisponible.');
  const {data,error}=await sb.from('cp_roster_recovery')
