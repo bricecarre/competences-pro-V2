@@ -21,10 +21,10 @@ new="const x={...old,pfmpId:p.id,pfmpTrainingYear:selectedYear,studentId,comp,st
 assert block.count(old)==1,'Status save anchor missing'
 block=block.replace(old,new,1)
 # Insérer avant la fermeture de draw(), sans dépendre du point-virgule ou de l'indentation.
-point=block.find('      save();draw()')
+point=block.find("const x={...old,pfmpId:p.id,pfmpTrainingYear:selectedYear")
 assert point>=0,'Enregistrement statut PFMP absent'
 closing=block.find('\n  };',point)
-assert 0<closing-point<400,'Fin du rendu PFMP introuvable'
+assert 0<closing-point<1200,'Fin du rendu PFMP introuvable'
 insertion="""
     // data-cp-pfmp-grade-v263 : note facultative /20 distincte du niveau de maîtrise.
     document.querySelectorAll('.cp-pfmp-grade-v263').forEach(input=>input.onchange=()=>{
