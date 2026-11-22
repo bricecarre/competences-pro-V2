@@ -20,11 +20,12 @@ old="const x={pfmpId:p.id,pfmpTrainingYear:selectedYear,studentId,comp,status,as
 new="const x={...old,pfmpId:p.id,pfmpTrainingYear:selectedYear,studentId,comp,status,assessorType,assessorName,teacherId:assessorType==='teacher'?session.user:null,date:new Date().toISOString().slice(0,10)};"
 assert block.count(old)==1,'Status save anchor missing'
 block=block.replace(old,new,1)
-old="""      save();draw()
-    })
-  };"""
-new="""      save();draw()
-    });
+# Insérer avant la fermeture de draw(), sans dépendre du point-virgule ou de l'indentation.
+point=block.find('      save();draw()')
+assert point>=0,'Enregistrement statut PFMP absent'
+closing=block.find('\n  };',point)
+assert 0<closing-point<400,'Fin du rendu PFMP introuvable'
+insertion="""
     // data-cp-pfmp-grade-v263 : note facultative /20 distincte du niveau de maîtrise.
     document.querySelectorAll('.cp-pfmp-grade-v263').forEach(input=>input.onchange=()=>{
       if(session?.role!=='teacher'||assessorType!=='teacher')return;
@@ -42,9 +43,8 @@ new="""      save();draw()
       data.pfmpResults=old?data.pfmpResults.map(r=>r===old?x:r):[...data.pfmpResults,x];
       save();draw();
     });
-  };"""
-assert block.count(old)==1,'Grade handler anchor missing'
-block=block.replace(old,new,1)
+"""
+block=block[:closing]+insertion+block[closing:]
 s=s[:a]+block+s[b:]
 p.write_text(s,encoding='utf-8')
 print('V2.63 optional grades out of 20 by PFMP competency')
