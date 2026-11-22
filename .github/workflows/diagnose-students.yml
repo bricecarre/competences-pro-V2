@@ -1,4 +1,4 @@
-name: Diagnose intégration PFMP professeur
+name: Inspection bilan global PFMP
 on:
   push:
     paths: ['.github/workflows/diagnose-students.yml']
@@ -9,16 +9,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspecter fonctions PFMP sans données personnelles
+      - name: Examiner la vue de notation générale
         run: |
           python3 - <<'PY'
           from pathlib import Path
           s=Path('index.html').read_text(encoding='utf-8')
-          for needle in ['function cpPfmpTeacherDiary(', 'function studentReferentialData(', 'function pfmpEvalResult(', 'function cpPfmpStudentDiary(']:
-            p=s.find(needle)
-            print('FUNCTION',needle,'OFFSET',p)
-            if p>=0:
-              q=s.find('\\nfunction ',p+20)
-              if q<0:q=p+8500
-              print(s[p:min(q,p+8500)])
+          for term in ['function evaluatePfmp(', 'function pfmpEvaluationOverview(', 'function pfmpEvaluationStudentDetail(', 'function cpPfmpTeacherDiary(']:
+            a=s.find(term)
+            b=s.find('\nfunction ',a+20) if a>=0 else -1
+            print('PFMP_VIEW_START',term,'length',b-a)
+            if a>=0:
+              snippet=s[a:(b if b>0 else a+12000)]
+              print(snippet[:25000])
+              print('PFMP_VIEW_END')
           PY
