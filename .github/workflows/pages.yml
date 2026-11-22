@@ -52,6 +52,7 @@ jobs:
           python3 scripts/patch_archives_ui_v257.py index.html
           python3 scripts/patch_pfmp_weekly_v258.py index.html
           python3 scripts/patch_profile_contacts_v259.py index.html
+          python3 scripts/patch_pfmp_competency_grades_v263.py index.html
           cp index.html site/index.html
           cp sauvegarde-en-ligne.html site/sauvegarde-en-ligne.html
           cp cloud-sync-v244.js site/cloud-sync-v244.js
@@ -86,6 +87,10 @@ jobs:
           grep -q 'loadedSections.has' site/cloud-sync-v244.js
           grep -q 'cp_pfmp_activity_entries' site/cloud-sync-v244.js
           grep -q 'activity_end_date' site/cloud-sync-v244.js
+          grep -q 'removed_at' site/cloud-sync-v244.js
+          grep -q 'cpCloudDeletePfmpActivity' site/cloud-sync-v244.js
+          grep -q 'cp-week-v262-edit' site/pfmp-weekly-v258.js
+          grep -q 'teacherAssessments' site/pfmp-weekly-v258.js
           python3 - <<'PY'
           from pathlib import Path
           import re
@@ -114,6 +119,8 @@ jobs:
           assert "data-cp-teacher-assigned-only-v256" in s
           assert "data-cp-archive-safe-v257" in s
           assert "data-cp-contact-v259" in s
+          assert "data-cp-pfmp-grade-v263" in s
+          assert "cp-pfmp-grade-v263" in s
           assert 'id="phone" type="tel"' in s
           assert 'id="email" type="email"' in s
           assert "data-cp-pfmp-period-v257" in s
