@@ -17,7 +17,47 @@ const formatDate=value=>{
  const d=parseDate(value);
  return d?new Intl.DateTimeFormat('fr-FR',{day:'2-digit',month:'2-digit',timeZone:'UTC'}).format(d):value||'';
 };
-const status=e=>e.validation_status==='confirmed'?'Validée':'En attente';
+const status=e=>e.validation_status==='confirmed'?'Validée par le tuteur':e.validation_status==='correction_requested'?'Correction demandée':'En attente de validation du tuteur';
+// V2.62 : reprendre uniquement les évaluations PFMP déjà enregistrées par le professeur.
+// Le logiciel conserve des niveaux de maîtrise ; aucune note numérique n'est fabriquée.
+function teacherAssessments(studentId,pfmpId,entry){
+ try{
+  const ref=typeof studentReferentialData==='function'?studentReferentialData(studentId):null;
+  const results=(typeof data!=='undefined'&&Array.isArray(data.pfmpResults)?data.pfmpResults:[])
+   .filter(r=>String(r.studentId)===String(studentId)&&String(r.pfmpId)===String(pfmpId)&&r.assessorType==='teacher'
+      &&r.status&&r.status!=='Non évalué');
+  const byCode=new Map(results.map(r=>[String(r.comp||''),r]));
+  const selected=Array.isArray(entry.competency_codes)?entry.competency_codes.map(String).filter(Boolean):[];
+  const codes=selected.length?selected:[...byCode.keys()].filter(Boolean);
+  const zone=document.createElement('div');
+  zone.style.cssText='margin-top:7px;padding-top:7px;border-top:1px solid var(--line,#9996);font-size:11px;';
+  const heading=document.createElement('div');
+  heading.style.cssText='font-weight:700;margin-bottom:4px;';
+  heading.textContent=selected.length?'Évaluation du professeur — compétences de l’activité':'Évaluation du professeur — PFMP';
+  zone.appendChild(heading);
+  if(!selected.length&&codes.length){
+   const hint=document.createElement('div');hint.className='muted small';
+   hint.textContent='Ces niveaux concernent la PFMP entière : les compétences ne sont pas encore liées à cette activité.';
+   zone.appendChild(hint);
+  }
+  if(!codes.length){
+   const pending=document.createElement('div');pending.className='muted small';
+   pending.textContent='Aucune compétence évaluée pour le moment.';
+   zone.appendChild(pending);
+   return zone;
+  }
+  for(const code of codes){
+   const result=byCode.get(code);
+   const item=document.createElement('div');
+   item.style.cssText='margin-top:4px;overflow-wrap:anywhere;';
+   const grade=result?.grade??result?.note;
+   const gradeLabel=grade!==undefined&&grade!==null&&String(grade)!==''?' · Note : '+String(grade)+'/20':'';
+   item.textContent=code+(ref?.labels?.[code]?' — '+ref.labels[code]:'')+' : '+(result?.status||'Non évaluée')+gradeLabel;
+   zone.appendChild(item);
+  }
+  return zone;
+ }catch(_){const n=document.createElement('div');n.textContent='Évaluations PFMP momentanément indisponibles.';return n}
+}
 const studentContext=()=>typeof session!=='undefined'&&session?.role==='student'&&
  typeof studentApplicablePfmps==='function'&&typeof window.cpCloudListPfmpActivities==='function';
 function weeksFor(pfmp){
@@ -107,14 +147,20 @@ function renderOne(wrapper,entryPfmp){
  const note=box.querySelector('.cp-weekly-text-v258');
  const msg=box.querySelector('.cp-weekly-message-v258');
  const save=box.querySelector('.cp-weekly-save-v258');
+ let editingId=null;
  from.min=start;from.max=end;to.min=start;to.max=end;
- const openEditor=date=>{
+ const openEditor=(date,existing=null)=>{
+  editingId=existing?.id||null;
   editor.hidden=false;
-  from.value=date;to.value=date;note.value='';msg.textContent='';
+  from.value=existing?.activity_date||date;
+  to.value=existing?.activity_end_date||existing?.activity_date||date;
+  note.value=existing?.activity_text||'';
+  save.textContent=editingId?'Enregistrer les modifications':'Enregistrer l’activité';
+  msg.textContent='';
   editor.scrollIntoView({block:'nearest',behavior:'smooth'});
   note.focus();
  };
- box.querySelector('.cp-weekly-cancel-v258').onclick=()=>{editor.hidden=true;msg.textContent=''};
+ box.querySelector('.cp-weekly-cancel-v258').onclick=()=>{editor.hidden=true;editingId=null;msg.textContent=''};
  save.onclick=async()=>{
   const a=from.value,b=to.value,text=note.value.trim();
   if(!parseDate(a)||!parseDate(b)||a<start||b>end||b<a){
@@ -124,8 +170,9 @@ function renderOne(wrapper,entryPfmp){
   if(session?.role!=='student')return;
   save.disabled=true;msg.textContent='Enregistrement de l’activité…';
   try{
-   await window.cpCloudAddPfmpActivity(session.user,String(entryPfmp.id),a,text,b);
-   editor.hidden=true;
+   if(editingId)await window.cpCloudUpdatePfmpActivity(editingId,a,text,b);
+   else await window.cpCloudAddPfmpActivity(session.user,String(entryPfmp.id),a,text,b);
+   editor.hidden=true;editingId=null;
    await refresh();
    if(typeof cpPfmpActivityListHtml==='function'&&originalList){
     const entries=await window.cpCloudListPfmpActivities(session.user,String(entryPfmp.id));
@@ -168,7 +215,45 @@ function renderOne(wrapper,entryPfmp){
       card.style.cssText='font-size:12px;padding:6px;margin-bottom:6px;border-radius:6px;background:rgba(74,145,191,.13);overflow-wrap:anywhere;';
       const range=e.activity_end_date&&e.activity_end_date!==e.activity_date
        ?'Du '+formatDate(e.activity_date)+' au '+formatDate(e.activity_end_date)+' · ':'';
-      card.textContent=range+String(e.activity_text||'')+' · '+status(e);
+      const content=document.createElement('div');
+      content.textContent=range+String(e.activity_text||'');
+      card.appendChild(content);
+      const validation=document.createElement('div');
+      validation.style.cssText='margin-top:6px;font-weight:700;';
+      validation.textContent='Validation du tuteur : '+status(e);
+      card.appendChild(validation);
+      if(e.tutor_comment){
+       const comment=document.createElement('div');
+       comment.style.cssText='margin-top:4px;';
+       comment.textContent='Commentaire : '+String(e.tutor_comment);
+       card.appendChild(comment);
+      }
+      card.appendChild(teacherAssessments(session.user,String(entryPfmp.id),e));
+      if(e.validation_status!=='confirmed'){
+       const actions=document.createElement('div');
+       actions.style.cssText='display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;';
+       const edit=document.createElement('button');edit.type='button';edit.className='btn cp-week-v262-edit';
+       edit.style.cssText='font-size:11px;padding:5px 7px;';edit.textContent='✏️ Modifier';
+       edit.onclick=()=>openEditor(e.activity_date,e);
+       const remove=document.createElement('button');remove.type='button';remove.className='btn cp-week-v262-remove';
+       remove.style.cssText='font-size:11px;padding:5px 7px;';remove.textContent='Supprimer';
+       remove.onclick=async()=>{
+        if(session?.role!=='student'||session?.user!==e.student_id)return;
+        if(!window.confirm('Retirer cette activité du carnet ? Elle disparaîtra de tous les jours concernés.'))return;
+        remove.disabled=true;
+        try{
+         await window.cpCloudDeletePfmpActivity(e.id);
+         if(editingId===e.id){editingId=null;editor.hidden=true;}
+         await refresh();
+        }catch(err){window.alert('Impossible de retirer l’activité : '+String(err?.message||err));remove.disabled=false;}
+       };
+       actions.append(edit,remove);card.appendChild(actions);
+      }else{
+       const locked=document.createElement('div');
+       locked.className='muted small';locked.style.cssText='margin-top:5px;';
+       locked.textContent='Activité validée : modification verrouillée.';
+       card.appendChild(locked);
+      }
       cell.appendChild(card);
      });
      const button=document.createElement('button');
