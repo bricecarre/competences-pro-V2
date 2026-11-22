@@ -1,4 +1,4 @@
-name: Inspection bilan global PFMP
+name: Inspect annual student report code
 on:
   push:
     paths: ['.github/workflows/diagnose-students.yml']
@@ -9,17 +9,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Examiner la vue de notation générale
+      - name: Find annual report and assessment aggregation
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
           s=Path('index.html').read_text(encoding='utf-8')
-          for term in ['function evaluatePfmp(', 'function pfmpEvaluationOverview(', 'function pfmpEvaluationStudentDetail(', 'function cpPfmpTeacherDiary(']:
-            a=s.find(term)
-            b=s.find('\nfunction ',a+20) if a>=0 else -1
-            print('PFMP_VIEW_START',term,'length',b-a)
-            if a>=0:
-              snippet=s[a:(b if b>0 else a+12000)]
-              print(snippet[:25000])
-              print('PFMP_VIEW_END')
+          terms=['function bilan','function annual','function studentReport','function competencyAverageScore','function pfmpCompetencyStatuses','bilan annuel','Bilan annuel','Bilan de l','bilanStudent','annualMean','function studentProgress']
+          for t in terms:
+            ms=list(re.finditer(re.escape(t),s,re.I))
+            print('CP_ANNUAL_TERM',t,'COUNT',len(ms))
+            for m in ms[:9]:
+              p=m.start()
+              print('CP_ANNUAL_EXCERPT',t,repr(s[max(0,p-320):min(len(s),p+800)]))
+          for m in re.finditer(r'function\s+([\w]*[Bb]ilan[\w]*|[\w]*[Aa]nnual[\w]*|[\w]*[Pp]rogress[\w]*)\s*\(',s):
+            print('CP_ANNUAL_FUN',m.group(1),'OFFSET',m.start())
           PY
