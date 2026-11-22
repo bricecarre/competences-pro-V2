@@ -6704,6 +6704,17 @@ function savePfmpAppraisalRecord(pfmpId,studentId,assessorType,assessorName,appr
 }
 
 function pfmpEvaluationStudentDetail(pfmpId,studentId){
+ // data-cp-stage-summary-v266 : une seule source pédagogique, le carnet.
+ const activityPfmp=(data.pfmps||[]).find(x=>x.id===pfmpId);
+ const activityStudent=data.students.find(x=>x.id===studentId);
+ if(!activityPfmp||!activityStudent)return alert('Dossier PFMP introuvable.');
+ modal('<div class="titlebar"><div><h2>'+esc(activityPfmp.label||'PFMP')+' · '+esc(name(activityStudent))+
+   '</h2><div class="muted">Activités réalisées et bilan des compétences évaluées</div></div>'+
+   '<button class="btn close">Fermer</button></div>'+
+   '<div class="card" id="cp-pfmp-student-evaluation-diary-v250" style="margin-top:12px"></div>');
+ cpPfmpTeacherDiary(activityStudent.id,activityPfmp.id,'cp-pfmp-student-evaluation-diary-v250');
+ return;
+
  const p=(data.pfmps||[]).find(x=>x.id===pfmpId);
  const s=data.students.find(x=>x.id===studentId);
  if(!p||!s)return alert('Évaluation PFMP introuvable.');
@@ -6867,19 +6878,19 @@ function evaluatePfmp(pfmpId,schoolId,trainingYear,classId=null,initialStudentId
  if(!students.length)return alert(classId?'Aucun élève dans cette classe.':`Aucun élève de ${expectedLevel} dans cet établissement.`);
  let assessorType='teacher';
 
- modal(`<div class="titlebar"><div><h2>Évaluer une PFMP</h2><div class="muted">${esc(schoolNameById(schoolId))} · ${esc(referentialShortLabel(refKey))}${classId?` · ${esc(data.classes.find(c=>c.id===classId)?.name||'Classe')}`:` · ${esc(expectedLevel)}`} · compétences du référentiel</div></div><button class="btn close">Fermer</button></div>
+ modal(`<div class="titlebar"><div><h2>Carnet d’activités et bilan de PFMP</h2><div class="muted">${esc(schoolNameById(schoolId))} · ${esc(referentialShortLabel(refKey))}${classId?` · ${esc(data.classes.find(c=>c.id===classId)?.name||'Classe')}`:` · ${esc(expectedLevel)}`} · compétences du référentiel</div></div><button class="btn close">Fermer</button></div>
  <div class="cycle-note">${singleStudent
    ? `Vous évaluez uniquement <b>${esc(name(singleStudent))}</b> pour cette PFMP. `
    : classId
      ? 'Seuls les élèves de la classe sélectionnée sont proposés. '
      : `Seuls les élèves de ${esc(expectedLevel)} en ${esc(referentialShortLabel(refKey))} sont proposés. `
- }Modifiez l’évaluation du professeur référent ou du tuteur entreprise.</div>
+ }Associez une évaluation à chaque activité. Le bilan général récapitule automatiquement les compétences évaluées.</div>
  <div class="field">
    <label>Élève</label>
    <select id="pfmpStudent" ${singleStudent?'disabled':''}>${students.map(s=>{const c=data.classes.find(x=>x.id===s.classId);return `<option value="${s.id}" ${(initialStudentId===s.id||singleStudent?.id===s.id)?'selected':''}>${esc(name(s))} · ${esc(c?.name||'')}</option>`}).join('')}</select>
  </div>
  <div class="pfmp-level-note" id="pfmpLevelNote"></div>
- <div class="pfmp-assessor-tabs">
+ <div class="pfmp-assessor-tabs" style="display:none">
    <button class="btn active assessorTab" data-type="teacher">Professeur référent</button>
    <button class="btn assessorTab" data-type="tutor">Tuteur entreprise</button>
  </div>
@@ -6891,7 +6902,7 @@ function evaluatePfmp(pfmpId,schoolId,trainingYear,classId=null,initialStudentId
    </div>
  </div>
  <div class="pfmp-appreciation-save"><button class="btn" id="savePfmpAppreciation">Enregistrer l’appréciation</button><span class="muted small" id="pfmpAppreciationSaved"></span></div>
- <div class="card" id="cp-pfmp-teacher-journal-v250" style="margin-top:12px" data-pfmp-activity-journal-v250="teacher"></div><div id="pfmpEvalZone"></div>`);
+ <div class="card" id="cp-pfmp-teacher-journal-v250" style="margin-top:12px" data-pfmp-activity-journal-v250="teacher"></div><div id="pfmpEvalZone" style="display:none" data-cp-stage-summary-v266="historical-evaluations-preserved"></div>`);
 
  let activeAppraisalContext=null;
  let pfmpVoiceRecognition=null;
