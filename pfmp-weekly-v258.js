@@ -129,13 +129,13 @@ function renderOne(wrapper,entryPfmp){
  }
  const start=weeks[0].dates.find(d=>d>=entryPfmp.startDate);
  const end=entryPfmp.endDate||weeks[weeks.length-1].dates[4];
- box.innerHTML='<div class="muted small" style="margin:0 0 10px">Semaine par semaine, clique sur une case vide pour décrire une activité. Une même activité peut couvrir plusieurs jours.</div>'
+ box.innerHTML='<div class="muted small" style="margin:0 0 10px">Une case par semaine pour renseigner tes activités de PFMP.</div>'
   +'<div class="cp-weekly-calendar-v258" role="region" aria-label="Carnet hebdomadaire des activités PFMP"></div>'
   +'<div class="cp-weekly-editor-v258" hidden style="padding:12px;margin:12px 0;border:1px solid var(--line,#aaa);border-radius:9px">'
   +'<strong>Activité de stage</strong>'
-  +'<div style="display:flex;gap:12px;flex-wrap:wrap;margin:10px 0">'
-  +'<label>Début <input class="cp-weekly-start-v258" type="date" style="display:block;padding:8px;max-width:190px"></label>'
-  +'<label>Fin <input class="cp-weekly-end-v258" type="date" style="display:block;padding:8px;max-width:190px"></label></div>'
+  +'<div style="display:none">'
+  +'<input class="cp-weekly-start-v258" type="date">'
+  +'<input class="cp-weekly-end-v258" type="date"></div>'
   +'<label style="display:block">Activité réalisée<textarea class="cp-weekly-text-v258" rows="4" maxlength="5000" placeholder="Décris ce que tu as réalisé…" style="display:block;width:100%;min-height:90px;padding:9px;margin-top:6px"></textarea></label>'
   +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button type="button" class="btn primary cp-weekly-save-v258">Enregistrer</button><button type="button" class="btn cp-weekly-cancel-v258">Annuler</button></div>'
   +'<p class="muted small cp-weekly-message-v258" role="status"></p>'
@@ -149,11 +149,11 @@ function renderOne(wrapper,entryPfmp){
  const save=box.querySelector('.cp-weekly-save-v258');
  let editingId=null;
  from.min=start;from.max=end;to.min=start;to.max=end;
- const openEditor=(date,existing=null)=>{
+ const openEditor=(fromDate,toDate,existing=null)=>{
   editingId=existing?.id||null;
   editor.hidden=false;
-  from.value=existing?.activity_date||date;
-  to.value=existing?.activity_end_date||existing?.activity_date||date;
+  from.value=existing?.activity_date||fromDate;
+  to.value=existing?.activity_end_date||existing?.activity_date||toDate;
   note.value=existing?.activity_text||'';
   save.textContent=editingId?'Enregistrer les modifications':'Enregistrer l’activité';
   msg.textContent='';
@@ -189,88 +189,81 @@ function renderOne(wrapper,entryPfmp){
   if(!box.isConnected)return;
   cal.innerHTML='';
   weeks.forEach((week,index)=>{
-   const weekBox=document.createElement('div');weekBox.className='cp-week-v258';
-   weekBox.style.cssText='margin:12px 0;border:1px solid var(--line,#aaa5);border-radius:10px;padding:10px;';
-   const first=week.dates.find((d,i)=>week.inside[i]);
-   const last=week.dates.slice().reverse().find((d,i)=>week.inside[4-i]);
+   const first=week.dates.find((date,i)=>week.inside[i]);
+   const last=week.dates.slice().reverse().find((date,i)=>week.inside[4-i]);
+   if(!first||!last)return;
+   const weekBox=document.createElement('section');
+   weekBox.className='cp-week-v258 cp-week-v264';
+   weekBox.style.cssText='margin:12px 0;border:1px solid var(--line,#aaa5);border-radius:10px;padding:12px;';
    const heading=document.createElement('div');
-   heading.style.cssText='font-weight:700;margin-bottom:8px;';
-   heading.textContent='Semaine '+(index+1)+' · du '+formatDate(first)+' au '+formatDate(last);
+   heading.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:10px;';
+   const title=document.createElement('strong');
+   title.textContent='Semaine '+(index+1)+' · du '+formatDate(first)+' au '+formatDate(last);
+   heading.appendChild(title);
+   const add=document.createElement('button');add.type='button';
+   add.className='btn cp-week-v258-add';
+   add.textContent='+ Activité';
+   add.setAttribute('aria-label','Ajouter une activité pour la semaine '+(index+1));
+   add.onclick=()=>openEditor(first,last);
+   heading.appendChild(add);
    weekBox.appendChild(heading);
-   const scroll=document.createElement('div');scroll.style.cssText='overflow-x:auto;';
-   const grid=document.createElement('div');
-   grid.className='cp-week-v258-grid';
-   grid.style.cssText='display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:7px;min-width:690px;';
-   for(let d=0;d<5;d++){
-    const day=week.dates[d],valid=week.inside[d];
-    const cell=document.createElement('div');
-    cell.className='cp-week-v258-cell';
-    cell.style.cssText='min-height:105px;border:1px '+(valid?'dashed':'solid')+' var(--line,#aaa8);border-radius:8px;padding:8px;background:'+(valid?'transparent':'rgba(120,120,120,.08)');
-    const label=document.createElement('div');label.style.cssText='font-weight:700;font-size:12px;margin-bottom:7px';
-    label.textContent=weekday[d]+' '+formatDate(day);cell.appendChild(label);
-    if(valid){
-     const daily=entries.filter(e=>String(e.activity_date||'')<=day&&String(e.activity_end_date||e.activity_date||'')>=day);
-     daily.forEach(e=>{
-      const card=document.createElement('div');
-      card.style.cssText='font-size:12px;padding:6px;margin-bottom:6px;border-radius:6px;background:rgba(74,145,191,.13);overflow-wrap:anywhere;';
-      const range=e.activity_end_date&&e.activity_end_date!==e.activity_date
-       ?'Du '+formatDate(e.activity_date)+' au '+formatDate(e.activity_end_date)+' · ':'';
-      const content=document.createElement('div');
-      content.textContent=range+String(e.activity_text||'');
-      card.appendChild(content);
-      const validation=document.createElement('div');
-      validation.style.cssText='margin-top:6px;font-weight:700;';
-      validation.textContent='Validation du tuteur : '+status(e);
-      card.appendChild(validation);
-      if(e.tutor_comment){
-       const comment=document.createElement('div');
-       comment.style.cssText='margin-top:4px;';
-       comment.textContent='Commentaire : '+String(e.tutor_comment);
-       card.appendChild(comment);
-      }
-      card.appendChild(teacherAssessments(session.user,String(entryPfmp.id),e));
-      if(e.validation_status!=='confirmed'){
-       const actions=document.createElement('div');
-       actions.style.cssText='display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;';
-       const edit=document.createElement('button');edit.type='button';edit.className='btn cp-week-v262-edit';
-       edit.style.cssText='font-size:11px;padding:5px 7px;';edit.textContent='✏️ Modifier';
-       edit.onclick=()=>openEditor(e.activity_date,e);
-       const remove=document.createElement('button');remove.type='button';remove.className='btn cp-week-v262-remove';
-       remove.style.cssText='font-size:11px;padding:5px 7px;';remove.textContent='Supprimer';
-       remove.onclick=async()=>{
-        if(session?.role!=='student'||session?.user!==e.student_id)return;
-        if(!window.confirm('Retirer cette activité du carnet ? Elle disparaîtra de tous les jours concernés.'))return;
-        remove.disabled=true;
-        try{
-         await window.cpCloudDeletePfmpActivity(e.id);
-         if(editingId===e.id){editingId=null;editor.hidden=true;}
-         await refresh();
-        }catch(err){window.alert('Impossible de retirer l’activité : '+String(err?.message||err));remove.disabled=false;}
-       };
-       actions.append(edit,remove);card.appendChild(actions);
-      }else{
-       const locked=document.createElement('div');
-       locked.className='muted small';locked.style.cssText='margin-top:5px;';
-       locked.textContent='Activité validée : modification verrouillée.';
-       card.appendChild(locked);
-      }
-      cell.appendChild(card);
-     });
-     const button=document.createElement('button');
-     button.type='button';button.className='btn cp-week-v258-add';
-     button.style.cssText='width:100%;text-align:center;min-height:32px;font-size:12px';
-     button.textContent='+ Activité';
-     button.setAttribute('aria-label','Ajouter une activité le '+weekday[d]+' '+formatDate(day));
-     button.onclick=()=>openEditor(day);
-     cell.appendChild(button);
-    }else{
-     const empty=document.createElement('span');
-     empty.className='muted small';empty.textContent='Hors période';
-     cell.appendChild(empty);
-    }
-    grid.appendChild(cell);
+   const activities=entries.filter(e=>
+     String(e.activity_date||'')<=last&&String(e.activity_end_date||e.activity_date||'')>=first
+   );
+   if(!activities.length){
+    const empty=document.createElement('div');empty.className='muted small cp-week-v264-empty';
+    empty.textContent='Aucune activité renseignée pour cette semaine.';
+    empty.style.cssText='padding:16px 10px;border:1px dashed var(--line,#aaa6);border-radius:8px;';
+    weekBox.appendChild(empty);
    }
-   scroll.appendChild(grid);weekBox.appendChild(scroll);cal.appendChild(weekBox);
+   activities.forEach(e=>{
+    const card=document.createElement('article');
+    card.className='cp-week-v264-activity';
+    card.style.cssText='padding:11px;margin:9px 0;border-radius:8px;background:rgba(74,145,191,.13);overflow-wrap:anywhere;';
+    const content=document.createElement('div');
+    content.style.whiteSpace='pre-wrap';
+    content.textContent=String(e.activity_text||'');
+    card.appendChild(content);
+    const validation=document.createElement('div');
+    validation.style.cssText='margin-top:8px;font-weight:650;font-size:12px;';
+    validation.textContent='Validation du tuteur : '+status(e);
+    card.appendChild(validation);
+    if(e.tutor_comment){
+     const comment=document.createElement('div');comment.style.marginTop='5px';
+     comment.textContent='Commentaire : '+String(e.tutor_comment);
+     card.appendChild(comment);
+    }
+    card.appendChild(teacherAssessments(session.user,String(entryPfmp.id),e));
+    if(e.validation_status!=='confirmed'){
+     const actions=document.createElement('div');
+     actions.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;';
+     const edit=document.createElement('button');
+     edit.type='button';edit.className='btn cp-week-v262-edit';edit.textContent='✏️ Modifier';
+     edit.onclick=()=>openEditor(first,last,e);
+     const remove=document.createElement('button');
+     remove.type='button';remove.className='btn cp-week-v262-remove';remove.textContent='Supprimer';
+     remove.onclick=async()=>{
+      if(session?.role!=='student'||String(session.user)!==String(e.student_id))return;
+      if(!window.confirm('Retirer cette activité du carnet ?'))return;
+      remove.disabled=true;
+      try{
+       await window.cpCloudDeletePfmpActivity(e.id);
+       if(editingId===e.id){editingId=null;editor.hidden=true;}
+       await refresh();
+      }catch(err){
+       window.alert('Impossible de retirer cette activité : '+String(err?.message||err));
+       remove.disabled=false;
+      }
+     };
+     actions.append(edit,remove);card.appendChild(actions);
+    }else{
+     const locked=document.createElement('div');
+     locked.className='muted small';locked.textContent='Activité validée : modification verrouillée.';
+     locked.style.marginTop='7px';card.appendChild(locked);
+    }
+    weekBox.appendChild(card);
+   });
+   cal.appendChild(weekBox);
   });
  }
  refresh();
