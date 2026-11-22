@@ -17,7 +17,7 @@ inject="""function cpRepairKnownRepeatersV254(visibleClassIds){
     ['Ilan Malidi',['ilan','malidi']],
     ['Samuel Poncet Lopez',['samuel','poncet','lopez']]
   ];
-  const classOptions=data.classes.filter(c=>canon(c.name)==='1tci1'&&(!visibleClassIds||visibleClassIds.includes(c.id)));
+  const classOptions=data.classes.filter(c=>canon(c.name).replace(/\\s+/g,'')==='1tci1'&&(!visibleClassIds||visibleClassIds.includes(c.id)));
   const restored=[],missing=[],unresolved=[];
   if(classOptions.length!==1){
     return {restored,missing:[],unresolved:targets.map(t=>t[0]+' : classe 1TCI1 '+(classOptions.length?'ambiguë':'non accessible'))};
