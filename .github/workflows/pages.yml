@@ -53,12 +53,16 @@ jobs:
           python3 scripts/patch_pfmp_weekly_v258.py index.html
           python3 scripts/patch_profile_contacts_v259.py index.html
           python3 scripts/patch_pfmp_competency_grades_v263.py index.html
+          python3 scripts/patch_pfmp_teacher_activity_v265.py index.html
           cp index.html site/index.html
           cp sauvegarde-en-ligne.html site/sauvegarde-en-ligne.html
           cp cloud-sync-v244.js site/cloud-sync-v244.js
           cp roster-recovery-v255.js site/roster-recovery-v255.js
           cp student-archives-v257.js site/student-archives-v257.js
           cp pfmp-weekly-v258.js site/pfmp-weekly-v258.js
+          cp pfmp-teacher-activity-v265.js site/pfmp-teacher-activity-v265.js
+          node --check site/pfmp-teacher-activity-v265.js
+          python3 scripts/test_pfmp_teacher_activity_v265.py
           node --check site/pfmp-weekly-v258.js
           python3 scripts/test_pfmp_weekly_ui_v263.py
           node --check site/student-archives-v257.js
@@ -90,6 +94,8 @@ jobs:
           grep -q 'activity_end_date' site/cloud-sync-v244.js
           grep -q 'removed_at' site/cloud-sync-v244.js
           grep -q 'cpCloudDeletePfmpActivity' site/cloud-sync-v244.js
+          grep -q 'cpCloudReviewPfmpActivity' site/cloud-sync-v244.js
+          grep -q 'cpCloudListPfmpActivityAssessments' site/cloud-sync-v244.js
           grep -q 'cp-week-v262-edit' site/pfmp-weekly-v258.js
           grep -q 'teacherAssessments' site/pfmp-weekly-v258.js
           python3 - <<'PY'
@@ -121,6 +127,7 @@ jobs:
           assert "data-cp-archive-safe-v257" in s
           assert "data-cp-contact-v259" in s
           assert "data-cp-pfmp-grade-v263" in s
+          assert "data-cp-pfmp-activity-eval-v265" in s
           assert "cp-pfmp-grade-v263" in s
           assert 'id="phone" type="tel"' in s
           assert 'id="email" type="email"' in s
