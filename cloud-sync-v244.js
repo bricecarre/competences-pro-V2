@@ -231,6 +231,7 @@ function schedule(obj){
 }
 window.cpCloudInitialize=init;
 window.cpCloudEnsureSequences=ensureSequences;
+window.cpCloudSequencesReady=()=>loadedSections.has('sequences');
 window.cpCloudSave=schedule;
 window.cpCloudListPfmpActivities=async(studentId,pfmpId)=>{
  if(!user||!sb)throw Error('Session Supabase non disponible.');
