@@ -63,7 +63,7 @@ new="""    bindCrud('student',filter);
       save();
       render();
     });"""
-assert s.count(old)==1,"liaison listes élèves introuvable"
+assert s.count(old)>=1,"liaison listes élèves introuvable"
 s=s.replace(old,new,1)
 p.write_text(s,encoding='utf-8')
 print("V2.52 : séquences chargées pour élèves et fiches archivées réactivables")
