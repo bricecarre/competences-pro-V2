@@ -35,7 +35,7 @@ new="""function student(){
     return;
   }
   const s=data.students.find"""
-pattern=r"function student\\(\\)\\{\\s*const s=data\\.students\\.find"
+pattern=r"function student\(\)\{\s*const s=data\.students\.find"
 s,n=re.subn(pattern,lambda m:new,s,count=1)
 assert n==1, "fonction student introuvable"
 old="const allVisible=data.students.filter(s=>!s.archived&&(!filter||filter.includes(s.classId))&&(!academyClasses||academyClasses.has(s.classId)));"
