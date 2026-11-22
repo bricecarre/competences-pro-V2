@@ -55,6 +55,7 @@ jobs:
           python3 scripts/patch_pfmp_competency_grades_v263.py index.html
           python3 scripts/patch_pfmp_teacher_activity_v265.py index.html
           python3 scripts/patch_pfmp_stage_summary_v266.py index.html
+          python3 scripts/patch_pfmp_annual_report_v267.py index.html
           cp index.html site/index.html
           cp sauvegarde-en-ligne.html site/sauvegarde-en-ligne.html
           cp cloud-sync-v244.js site/cloud-sync-v244.js
@@ -62,6 +63,9 @@ jobs:
           cp student-archives-v257.js site/student-archives-v257.js
           cp pfmp-weekly-v258.js site/pfmp-weekly-v258.js
           cp pfmp-teacher-activity-v265.js site/pfmp-teacher-activity-v265.js
+          cp pfmp-annual-report-v267.js site/pfmp-annual-report-v267.js
+          node --check site/pfmp-annual-report-v267.js
+          python3 scripts/test_pfmp_annual_report_v267.py
           node --check site/pfmp-teacher-activity-v265.js
           python3 scripts/test_pfmp_teacher_activity_v265.py
           node --check site/pfmp-weekly-v258.js
@@ -130,6 +134,9 @@ jobs:
           assert "data-cp-pfmp-grade-v263" in s
           assert "data-cp-pfmp-activity-eval-v265" in s
           assert "data-cp-stage-summary-v266" in s
+          assert 'data-cp-annual-pfmp-report="teacher"' in s
+          assert 'data-cp-annual-pfmp-report="student"' in s
+          assert '<script src="pfmp-annual-report-v267.js"></script>' in s
           assert '<div id="pfmpEvalZone" style="display:none"' in s
           assert "cp-pfmp-grade-v263" in s
           assert 'id="phone" type="tel"' in s
