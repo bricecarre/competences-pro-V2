@@ -38,9 +38,11 @@ function finish(success,message){
 }
 setTimeout(async()=>{
  try{
-  assert(document.querySelectorAll('.cp-week-v258-cell').length===5,'5 days missing');
+  assert(document.querySelectorAll('.cp-week-v264').length===1,'One card per week missing');
+  assert(document.querySelectorAll('.cp-week-v258-cell').length===0,'Daily columns still visible');
+  assert(document.querySelectorAll('.cp-week-v258-add').length===1,'One add button per week expected');
   assert(document.querySelector('.cp-diary-date-v250').hidden,'Old form still visible');
-  assert(document.querySelectorAll('.cp-week-v262-edit').length===2,'Multiday activity missing');
+  assert(document.querySelectorAll('.cp-week-v262-edit').length===1,'Activity must appear once per week');
   assert(document.body.textContent.includes('14/20'),'Teacher grade missing');
   assert(document.body.textContent.includes('Validation du tuteur : En attente'),'Tutor validation missing');
   document.querySelector('.cp-week-v262-edit').click();
@@ -75,4 +77,4 @@ if result.returncode!=0 or 'CP_WEEKLY_UI_PASS' not in result.stdout:
  print(result.stdout[-1500:])
  print(result.stderr[-1300:])
  raise SystemExit(1)
-print('OK : 5 jours, masquage ancien formulaire, note professeur, validation tuteur, modification et retrait vérifiés')
+print('OK : une case hebdomadaire sans colonnes journalières, masquage ancien formulaire, note professeur, validation tuteur, modification et retrait vérifiés')
