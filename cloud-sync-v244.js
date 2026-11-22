@@ -258,7 +258,7 @@ window.cpCloudAddPfmpActivity=async(studentId,pfmpId,date,content,endDate=date)=
 window.cpCloudUpdatePfmpActivity=async(id,startDate,text,endDate=startDate)=>{
  if(!user||!sb)throw Error('Session Supabase non disponible.');
  text=String(text||'').trim();
- const valid=v=>/^\\d{4}-\\d{2}-\\d{2}$/.test(v);
+ const valid=v=>/^\d{4}-\d{2}-\d{2}$/.test(v);
  if(!id||!valid(startDate)||!valid(endDate)||endDate<startDate)throw Error('Dates de début et de fin incorrectes.');
  if(!text||text.length>5000)throw Error('Décris l’activité (1 à 5 000 caractères).');
  const {data,error}=await sb.from('cp_pfmp_activity_entries')
