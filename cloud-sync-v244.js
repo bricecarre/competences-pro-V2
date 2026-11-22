@@ -238,7 +238,7 @@ window.cpCloudListPfmpActivities=async(studentId,pfmpId)=>{
  if(!studentId||!pfmpId)throw Error('Profil élève ou PFMP manquant.');
  const {data,error}=await sb.from('cp_pfmp_activity_entries')
   .select('id,student_id,pfmp_id,activity_date,activity_end_date,activity_text,created_at,validation_status,tutor_comment,reviewed_at,competency_codes')
-  .eq('owner_id',user.id).eq('student_id',String(studentId)).eq('pfmp_id',String(pfmpId))
+  .eq('owner_id',user.id).eq('student_id',String(studentId)).eq('pfmp_id',String(pfmpId)).is('removed_at',null)
   .order('activity_date',{ascending:true}).order('created_at',{ascending:true}).limit(500);
  if(error)throw error;
  return data||[];
@@ -257,16 +257,31 @@ window.cpCloudAddPfmpActivity=async(studentId,pfmpId,date,content,endDate=date)=
 };
 window.cpCloudUpdatePfmpActivity=async(id,startDate,text,endDate=startDate)=>{
  if(!user||!sb)throw Error('Session Supabase non disponible.');
+ if(typeof session==='undefined'||session?.role!=='student'||!session?.user)throw Error('Modification réservée à l’élève propriétaire.');
  text=String(text||'').trim();
  const valid=v=>/^\d{4}-\d{2}-\d{2}$/.test(v);
  if(!id||!valid(startDate)||!valid(endDate)||endDate<startDate)throw Error('Dates de début et de fin incorrectes.');
  if(!text||text.length>5000)throw Error('Décris l’activité (1 à 5 000 caractères).');
  const {data,error}=await sb.from('cp_pfmp_activity_entries')
   .update({activity_date:startDate,activity_end_date:endDate,activity_text:text})
-  .eq('owner_id',user.id).eq('id',String(id)).neq('validation_status','confirmed')
+  .eq('owner_id',user.id).eq('student_id',String(session.user)).eq('id',String(id)).is('removed_at',null).neq('validation_status','confirmed')
   .select('id,activity_date,activity_end_date,activity_text').maybeSingle();
  if(error)throw error;
  if(!data)throw Error('Activité introuvable ou déjà validée.');
+ return data;
+};
+// V2.62 : retrait réversible en base (pas de suppression de l'historique).
+window.cpCloudDeletePfmpActivity=async id=>{
+ if(!user||!sb)throw Error('Session Supabase non disponible.');
+ if(typeof session==='undefined'||session?.role!=='student'||!session?.user)throw Error('Retrait réservé à l’élève propriétaire.');
+ if(!id)throw Error('Activité introuvable.');
+ const {data,error}=await sb.from('cp_pfmp_activity_entries')
+  .update({removed_at:new Date().toISOString()})
+  .eq('owner_id',user.id).eq('student_id',String(session.user)).eq('id',String(id))
+  .is('removed_at',null).neq('validation_status','confirmed')
+  .select('id').maybeSingle();
+ if(error)throw error;
+ if(!data)throw Error('Activité absente ou déjà validée par le tuteur.');
  return data;
 };
 window.cpCloudGetClassRoster=async className=>{
