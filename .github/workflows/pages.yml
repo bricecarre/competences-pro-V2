@@ -46,10 +46,16 @@ jobs:
           python3 scripts/patch_teacher_school_scope_v253.py index.html
           python3 scripts/patch_repeaters_v254.py index.html
           python3 scripts/patch_roster_recovery_v255.py index.html
+          python3 scripts/patch_teacher_access_v256.py index.html
+          python3 scripts/patch_archive_safe_v257.py index.html
+          python3 scripts/patch_pfmp_period_v257.py index.html
+          python3 scripts/patch_archives_ui_v257.py index.html
           cp index.html site/index.html
           cp sauvegarde-en-ligne.html site/sauvegarde-en-ligne.html
           cp cloud-sync-v244.js site/cloud-sync-v244.js
           cp roster-recovery-v255.js site/roster-recovery-v255.js
+          cp student-archives-v257.js site/student-archives-v257.js
+          node --check site/student-archives-v257.js
           node --check site/roster-recovery-v255.js
           grep -q "cpCloudGetClassRoster" site/cloud-sync-v244.js
           # Bibliothèque Supabase servie localement : aucun CDN externe nécessaire au démarrage.
@@ -100,12 +106,18 @@ jobs:
           assert "data-cp-lazy-v248" in s
           assert "data-cp-student-repair-v252" in s
           assert "data-cp-school-class-scope-v253" in s
+          assert "data-cp-teacher-assigned-only-v256" in s
+          assert "data-cp-archive-safe-v257" in s
+          assert "data-cp-pfmp-period-v257" in s
+          assert '<script src="student-archives-v257.js"></script>' in s
           assert "data-cp-repeaters-v254" in s
           assert '<script src="roster-recovery-v255.js"></script>' in s
           assert "cpRepairKnownRepeatersV254" in s
           assert "Léo Alvarez" in s and "Ilan Malidi" in s and "Samuel Poncet Lopez" in s
           assert "const allowed=data.classes.filter(c=>" in s
-          assert "(t.schoolId&&String(c.schoolId)===String(t.schoolId))" in s
+          assert "Array.isArray(c.teachers)&&c.teachers.some(id=>String(id)===String(t.id))" in s
+          assert "st.archived=true" in s
+          assert "activity_end_date" not in s or "cp-diary-end-date-v257" in s
           assert "cpCloudEnsureSequences" in s
           assert "['notes','Mes notes']" not in s
           assert 'data-s="notes"><span class="mobile-nav-icon"' not in s
