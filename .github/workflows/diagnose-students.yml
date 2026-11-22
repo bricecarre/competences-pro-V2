@@ -1,4 +1,4 @@
-name: Diagnostiquer formulaire PFMP lecture seule
+name: Diagnostic structure évaluation PFMP
 on:
   push:
     paths: ['.github/workflows/diagnose-students.yml']
@@ -10,21 +10,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Trouver exactement le formulaire PFMP affiché
+      - name: Inspection code local, sans données élèves
         run: |
           python3 - <<'PY'
           from pathlib import Path
           s=Path('index.html').read_text(encoding='utf-8')
-          for term in ['Enregistrer mon activité','Activités réalisées','Date de début','cp-pfmp-journal-v250']:
-            positions=[]
-            start=0
-            while len(positions)<5:
-              at=s.find(term,start)
-              if at<0:break
-              positions.append(at)
-              start=at+len(term)
-            print('CP_PFMP_TERM',term,'positions',positions)
-            for at in positions:
-              sample=s[max(0,at-1600):at+850]
-              print('CP_PFMP_SNIPPET',repr(sample[:2500]))
+          for needle in ['function pfmpEvalStats(', 'function pfmpEvaluationStudentDetail(', 'function evaluatePfmp(', 'function studentApplicablePfmps(', 'function studentReferentialData(']:
+            p=s.find(needle)
+            if p<0:
+              print('MISSING',needle)
+              continue
+            end=s.find('\nfunction ',p+12)
+            if end<0:end=p+12000
+            piece=s[p:min(end,p+11000)]
+            print('CP_PFMP_FUNC',needle)
+            print(piece)
+            print('CP_END_FUNC')
           PY
