@@ -45,10 +45,15 @@ function renderOne(wrapper,entryPfmp){
  const box=document.createElement('section');box.className='cp-weekly-v258';
  box.style.cssText='margin:12px 0;display:block;';
  wrapper.insertBefore(box,wrapper.querySelector('.cp-diary-list-v250'));
+ // V2.60 : masquer la première partie de l'ancien carnet.
+ // Les activités restent enregistrées et consultables dans la grille hebdomadaire.
  const originalAdd=wrapper.querySelector('.cp-diary-add-v250');
  const oldForm=wrapper.querySelector('.cp-diary-form-v250');
- if(originalAdd)originalAdd.hidden=true;
- if(oldForm)oldForm.hidden=true;
+ const oldInfo=wrapper.querySelector('.cp-diary-info-v250');
+ const oldIntro=[...wrapper.children].find(el=>el.matches('p.muted.small')&&!el.classList.contains('cp-diary-info-v250'));
+ for(const el of [originalAdd,oldForm,oldInfo,oldIntro]){
+  if(el){el.hidden=true;el.style.display='none';}
+ }
  const originalList=wrapper.querySelector('.cp-diary-list-v250');
  if(originalList&&!wrapper.querySelector('.cp-weekly-old-details-v258')){
   const parent=originalList.parentNode;
@@ -60,6 +65,8 @@ function renderOne(wrapper,entryPfmp){
   detail.appendChild(summary);
   parent.insertBefore(detail,originalList);
   detail.appendChild(originalList);
+  // Conserver la possibilité de modifier une ancienne activité, en bas du carnet.
+  wrapper.appendChild(detail);
  }
  const weeks=weeksFor(entryPfmp);
  if(!weeks.length){
