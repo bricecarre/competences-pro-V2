@@ -1,4 +1,4 @@
-name: Diagnostic formulaire profils (lecture seule)
+name: Diagnostiquer formulaire PFMP lecture seule
 on:
   push:
     paths: ['.github/workflows/diagnose-students.yml']
@@ -10,18 +10,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Examiner les formulaires d'identité
+      - name: Trouver exactement le formulaire PFMP affiché
         run: |
           python3 - <<'PY'
           from pathlib import Path
           s=Path('index.html').read_text(encoding='utf-8')
-          for needle in ['function editEntity(', 'function editStudent(', 'function editTeacher(', 'function student(', 'function teacher(', 'function profile(', 'function editProfile(', 'function admin(', 'function name(']:
-            p=s.find(needle)
-            if p<0:continue
-            q=s.find('\nfunction ',p+12)
-            if q<0:q=min(len(s),p+18000)
-            content=s[p:min(q,p+23000)]
-            print('CP_PROFILE_START',needle,'LEN',len(content))
-            for line in content.splitlines():print('CP_CODE',line[:1100])
-            print('CP_PROFILE_END')
+          for term in ['Enregistrer mon activité','Activités réalisées','Date de début','cp-pfmp-journal-v250']:
+            positions=[]
+            start=0
+            while len(positions)<5:
+              at=s.find(term,start)
+              if at<0:break
+              positions.append(at)
+              start=at+len(term)
+            print('CP_PFMP_TERM',term,'positions',positions)
+            for at in positions:
+              sample=s[max(0,at-1600):at+850]
+              print('CP_PFMP_SNIPPET',repr(sample[:2500]))
           PY
