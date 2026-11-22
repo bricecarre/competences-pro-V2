@@ -46,10 +46,10 @@ jobs:
           from pathlib import Path
           import re
           s=Path('index.html').read_text(encoding='utf-8')
-          for term in ['function login(', 'function student(', 'function timeline(', 'function normalizeDataShape(', 'function studentReferentialData(', 'function render(', 'function teacher(', 'function studentMobilePage(', 'function studentTimeline(', 'function classes(', 'function students(', 'function shell(', 'classId', 'data.students.filter(', 'data.classes.filter(']:
+          for term in ['function login(', 'function student(', 'function timelineForStudent(', 'function listStudents(', 'function classDetail(', 'function classReferentialKey(', 'function studentFormationProgressHtml(', 'function studentProgressDetails(', 'function normalizeDataShape(', 'function studentReferentialData(', 'function render(', 'function teacher(', 'function studentMobilePage(', 'function studentTimeline(', 'function classes(', 'function students(', 'function shell(', 'classId', 'data.students.filter(', 'data.classes.filter(']:
             print('CP_DIAG_TERM',repr(term),'COUNT',s.count(term))
             p=s.find(term)
-            if p>=0: print('CP_DIAG_BEGIN',repr(term),s[max(0,p-220):p+5200].replace('\\n','\\\\n'),'CP_DIAG_END')
+            if p>=0: print('CP_DIAG_BEGIN',repr(term),s[max(0,p-220):p+8500].replace('\\n','\\\\n'),'CP_DIAG_END')
           PY
           cp index.html site/index.html
           cp sauvegarde-en-ligne.html site/sauvegarde-en-ligne.html
