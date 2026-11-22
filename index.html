@@ -4510,10 +4510,10 @@ function cpRepairKnownRepeatersV254(visibleClassIds){
   return {restored,missing,unresolved};
 }
 function listStudents(filter){
-  const repeaterCheck=cpRepairKnownRepeatersV254(filter);
+  const repeaterCheck={restored:[],missing:[],unresolved:[]}; // V2.56 : lecture seule à l’ouverture
 
  const academyClasses=session?.role==='admin'&&selectedAcademy?new Set(academyClassIds()):null;
- const allVisible=data.students.filter(s=>(!filter||filter.includes(s.classId))&&(!academyClasses||academyClasses.has(s.classId)));
+ const allVisible=data.students.filter(s=>!s.archived&&(!filter||filter.includes(s.classId))&&(!academyClasses||academyClasses.has(s.classId)));
 // Les fiches archivées restent repérables pour pouvoir les réactiver sans perte.
 
  let studentFilter='all';
@@ -5297,7 +5297,18 @@ function listEvals(adminMode=false,allowed=null){
  });
  draw()
 }
-function bindCrud(type,allowed){document.getElementById('add').onclick=()=>editEntity(type,null,allowed);document.querySelectorAll('.edit').forEach(b=>b.onclick=()=>editEntity(type,b.dataset.id,allowed));document.querySelectorAll('.del').forEach(b=>b.onclick=()=>{if(confirm('Archiver ce profil ?')){const key=type==='class'?'classes':type==='teacher'?'teachers':'students';data[key]=data[key].filter(x=>x.id!==b.dataset.id);save();render()}})}
+function bindCrud(type,allowed){document.getElementById('add').onclick=()=>editEntity(type,null,allowed);document.querySelectorAll('.edit').forEach(b=>b.onclick=()=>editEntity(type,b.dataset.id,allowed));document.querySelectorAll('.del').forEach(b=>b.onclick=()=>{if(confirm('Archiver ce profil ?')){const key=type==='class'?'classes':type==='teacher'?'teachers':'students';if(type==='student'){
+ const st=data.students.find(x=>String(x.id)===String(b.dataset.id));
+ if(!st)return;
+ // data-cp-archive-safe-v257 — ne jamais supprimer le dossier et ses références.
+ st.archived=true;
+ st.archivedAt=new Date().toISOString();
+}else if(type==='class'||type==='teacher'){
+ const entity=data[key].find(x=>String(x.id)===String(b.dataset.id));
+ if(!entity)return;
+ entity.archived=true;
+}else return;
+save();render()}})}
 function modal(html){
  document.body.insertAdjacentHTML('beforeend',`<div class="modal" id="modal"><div class="modalbox">${html}</div></div>`);
  const modals=document.querySelectorAll('.modal');
@@ -7812,7 +7823,7 @@ function cpPfmpActivityListHtml(entries){
  if(!entries.length)return '<p class="muted small">Aucune activité saisie pour cette période.</p>';
  return '<div style="display:grid;gap:9px;margin-top:10px">'+entries.map(e=>
  '<div class="card" style="padding:11px">'
- +'<b>'+esc(e.activity_date||'')+'</b> · <span class="muted small">'+esc(cpPfmpStatusText(e.validation_status))+'</span>'
+ +'<b>'+esc(e.activity_date||'')+(e.activity_end_date&&e.activity_end_date!==e.activity_date?' → '+esc(e.activity_end_date):'')+'</b> · <span class="muted small">'+esc(cpPfmpStatusText(e.validation_status))+'</span>'
  +'<div style="white-space:pre-wrap;overflow-wrap:anywhere;margin-top:5px">'+esc(e.activity_text||'')+'</div>'
  +(e.tutor_comment?'<div class="muted small">Retour du tuteur : '+esc(e.tutor_comment)+'</div>':'')
  +'</div>').join('')+'</div>';
@@ -7829,7 +7840,9 @@ async function cpPfmpStudentDiary(studentId){
   fragments.push('<details class="card" style="margin-top:10px"><summary style="cursor:pointer;font-weight:700">✍️ Carnet d’activités — '+esc(pfmp.label||'PFMP')+'</summary>'
    +'<div class="cp-diary-entry-v250" data-pfmp-id="'+esc(id)+'" style="margin-top:12px">'
    +'<p class="muted small">Décris les activités réalisées pendant cette période. Chaque enregistrement est transmis en ligne et marqué « En attente de confirmation du tuteur ».</p>'
-   +'<label style="display:block;margin-bottom:5px">Date de l’activité</label><input class="cp-diary-date-v250" type="date" value="'+new Date().toISOString().slice(0,10)+'" style="display:block;width:100%;max-width:220px;padding:8px">'
+   +'<label style="display:block;margin-bottom:5px">Date de début</label><input class="cp-diary-date-v250" type="date" value="'+new Date().toISOString().slice(0,10)+'" style="display:block;width:100%;max-width:220px;padding:8px">'
+   // data-cp-pfmp-period-v257
+   +'<label style="display:block;margin:8px 0 5px">Date de fin</label><input class="cp-diary-end-date-v257" type="date" value="'+new Date().toISOString().slice(0,10)+'" style="display:block;width:100%;max-width:220px;padding:8px">'
    +'<label style="display:block;margin:10px 0 5px">Activités réalisées</label><textarea class="cp-diary-text-v250" rows="4" maxlength="5000" placeholder="Ex. : traçage, découpe, assemblage, soudage, contrôle…" style="width:100%;min-height:100px;padding:9px"></textarea>'
    +'<button type="button" class="btn primary cp-diary-save-v250">Enregistrer mon activité</button>'
    +'<p role="status" class="muted small cp-diary-info-v250"></p>'
@@ -7848,12 +7861,14 @@ async function cpPfmpStudentDiary(studentId){
   wrapper.querySelector('.cp-diary-save-v250').onclick=async()=>{
    if(session?.role!=='student'||session.user!==studentId)return;
    const date=wrapper.querySelector('.cp-diary-date-v250').value;
+   const endDate=wrapper.querySelector('.cp-diary-end-date-v257').value;
    const field=wrapper.querySelector('.cp-diary-text-v250');
    const message=field.value.trim(),btn=wrapper.querySelector('.cp-diary-save-v250');
-   if(!date||!message){info.textContent='Renseigne une date et une activité.';return}
+   if(!date||!endDate||!message){info.textContent='Renseigne les dates de début, de fin et une activité.';return}
+   if(endDate<date){info.textContent='La date de fin doit être égale ou postérieure à la date de début.';return}
    btn.disabled=true;info.textContent='Enregistrement dans Supabase…';
    try{
-    await window.cpCloudAddPfmpActivity(studentId,pfmpId,date,message);
+    await window.cpCloudAddPfmpActivity(studentId,pfmpId,date,message,endDate);
     field.value='';
     info.textContent='Activité enregistrée. Confirmation du tuteur en attente.';
     await refresh();
@@ -8020,14 +8035,10 @@ function teacherNotesPage(allowedClassIds){
 function teacher(){
  const t=data.teachers.find(x=>x.id===session.user);
   if(!t){shell(title('Profil professeur introuvable','Reconnexion nécessaire.'));return}
-  // data-cp-school-class-scope-v253
-  // La liste de classes du professeur peut être incomplète dans un export ancien.
-  // Montrer toutes les classes de SON établissement, y compris Bac Pro,
-  // sans modifier les élèves, leurs évaluations ou les affectations enregistrées.
-  const allowed=data.classes.filter(c=>
-    (t.schoolId&&String(c.schoolId)===String(t.schoolId))||
-    (Array.isArray(c.teachers)&&c.teachers.includes(t.id))
-  ).map(c=>c.id);
+  // data-cp-teacher-assigned-only-v256
+  // Un professeur ne consulte que ses classes explicitement attribuées.
+  // Ni l'établissement entier ni un nom de classe ne donnent cet accès.
+  const allowed=data.classes.filter(c=>Array.isArray(c.teachers)&&c.teachers.some(id=>String(id)===String(t.id))).map(c=>c.id);
   const schoolIds=[...new Set(data.classes.filter(c=>allowed.includes(c.id)).map(c=>c.schoolId))];
  if(section==='dashboard'){
    const mainSchool=data.schools.find(s=>s.id===t.schoolId)||data.schools.find(s=>schoolIds.includes(s.id));
@@ -10387,4 +10398,6 @@ async function bootstrapApp(){
 }
 bootstrapApp();
 </script><script src="roster-recovery-v255.js"></script>
+<script src="student-archives-v257.js"></script>
+<script src="pfmp-weekly-v258.js"></script>
 </body></html>
