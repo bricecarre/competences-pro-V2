@@ -14,17 +14,21 @@ window.data={
 };
 window.STATUS=['Non évalué','Non acquis','En cours d’acquisition','Acquis','Maîtrisé'];
 window.studentReferentialData=()=>({comps:['C1','C2'],labels:{C1:'Préparation',C2:'Fabrication'}});
-let entry={id:'ac1',student_id:'s1',pfmp_id:'p1',activity_date:'2026-11-23',
- activity_end_date:'2026-11-27',activity_text:'Découpe de tôles',validation_status:'pending'};
+let entries=[
+ {id:'ac1',student_id:'s1',pfmp_id:'p1',activity_date:'2026-11-23',activity_end_date:'2026-11-27',activity_text:'Découpe de tôles',validation_status:'pending'},
+ {id:'ac2',student_id:'s1',pfmp_id:'p1',activity_date:'2026-11-30',activity_end_date:'2026-12-04',activity_text:'Assemblage de pièces',validation_status:'pending'},
+ {id:'ac3',student_id:'s1',pfmp_id:'p1',activity_date:'2026-12-07',activity_end_date:'2026-12-11',activity_text:'Contrôle dimensionnel',validation_status:'pending'}
+];
 let assessments=[],calls=[];
-window.cpCloudListPfmpActivities=async()=>[entry];
+window.cpCloudListPfmpActivities=async()=>entries;
 window.cpCloudListPfmpActivityAssessments=async()=>assessments;
 window.cpCloudReviewPfmpActivity=async(studentId,pfmpId,activityId,reviews,confirmed)=>{
  calls.push({studentId,pfmpId,activityId,reviews,confirmed});
- entry.validation_status=confirmed?'confirmed':'pending';
- assessments=reviews.map(r=>({activity_id:activityId,competency_code:r.code,mastery_level:r.mastery,grade:Number(r.grade)}));
+ const entry=entries.find(e=>e.id===activityId);
+ if(entry)entry.validation_status=confirmed?'confirmed':'pending';
+ assessments=assessments.filter(a=>a.activity_id!==activityId).concat(reviews.map(r=>({activity_id:activityId,competency_code:r.code,mastery_level:r.mastery,grade:Number(r.grade)})));
 };
-window.__testState=()=>({entry,assessments,calls});
+window.__testState=()=>({entries,assessments,calls});
 </script>
 <script src="SRC"></script>
 <script>
@@ -35,7 +39,8 @@ function result(ok,message){
 }
 window.cpPfmpTeacherActivityReview('s1','p1','zone').then(()=>{
  try{
-  if(document.querySelectorAll('.cp-v265-activity').length!==1)throw Error('Une activité attendue');
+  if(document.querySelectorAll('.cp-v265-activity').length!==3)throw Error('Trois activités distinctes attendues');
+  if(document.querySelectorAll('.cp-v266-stage-summary').length!==1)throw Error('Bilan global absent');
   document.querySelector('.cp-v265-add').click();
   const row=document.querySelector('.cp-v265-row');
   row.querySelector('.cp-v265-code').value='C1';
@@ -51,6 +56,9 @@ window.cpPfmpTeacherActivityReview('s1','p1','zone').then(()=>{
     if(call.reviews[0].code!=='C1'||call.reviews[0].mastery!=='Acquis'||call.reviews[0].grade!=='15')throw Error('Compétence ou note incorrecte');
     if(document.querySelector('.cp-v265-state')?.textContent!=='Validée par le professeur')throw Error('Confirmation non affichée');
     if(!document.querySelector('.cp-v265-unlock'))throw Error('Retrait de validation absent');
+    if(document.querySelectorAll('.cp-v265-activity').length!==3)throw Error('D’autres activités ont disparu après validation');
+    if(!document.querySelector('.cp-v266-competency')?.textContent.includes('C1'))throw Error('Compétence absente du bilan global');
+    if(!document.querySelector('.cp-v266-stage-summary')?.textContent.includes('1 validée(s)'))throw Error('Compteur de validation erroné');
     result(true,'');
    }catch(e){result(false,String(e))}
   },180);
@@ -62,4 +70,4 @@ run=subprocess.run(['google-chrome','--headless','--no-sandbox','--disable-gpu',
 if run.returncode or 'CP_TEACHER_UI_PASS' not in run.stdout:
  print(run.stdout[-2100:]);print(run.stderr[-1000:])
  raise SystemExit('Test enseignant PFMP échoué')
-print('OK : activité, sélection compétence, niveau, note /20 et validation professeur vérifiés')
+print('OK : trois activités indépendantes, validation de la première, bilan global calculé sans perdre les autres')
