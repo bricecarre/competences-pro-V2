@@ -5472,7 +5472,8 @@ function editEntity(type,uid0,allowed){
     ${session?.role==='admin'&&selectedAcademy?`<div class="muted small" style="margin-top:5px">Seuls les établissements déjà créés dans l’académie de ${esc(selectedAcademy)} sont proposés.</div>`:''}
   </div>
   <div class="row"><div class="field"><label>Prénom</label><input id="first" value="${esc(obj.first||'')}"></div><div class="field"><label>Nom</label><input id="last" value="${esc(obj.last||'')}"></div></div>
-  <div class="field"><label>Email</label><input id="email" value="${esc(obj.email||'')}"></div>
+  <div class="field"><label>Adresse e-mail (facultatif)</label><input id="email" type="email" autocomplete="email" value="${esc(obj.email||'')}" placeholder="nom@exemple.fr"></div>
+  <div class="field"><label>Numéro de téléphone (facultatif)</label><input id="phone" type="tel" autocomplete="tel" value="${esc(obj.phone||'')}" placeholder="06 00 00 00 00"></div>
   <div class="field"><label>Spécialité / discipline</label><select id="teacherSpecialty">
     <option value="" ${!obj.specialty?'selected':''}>— À renseigner —</option>
     <option value="P2400" ${obj.specialty==='P2400'?'selected':''}>P 2400 — Atelier</option>
@@ -5480,7 +5481,7 @@ function editEntity(type,uid0,allowed){
   </select><div class="muted small" style="margin-top:5px">Cette information identifie la spécialité du professeur dans l’application.</div></div>
   ${session?.role==='admin'?`<div class="field"><label>Mot de passe professeur</label><input id="teacherPasswordAdmin" type="text" inputmode="numeric" maxlength="4" value="${esc(teacherPasswordValue(obj))}" placeholder="4 chiffres"><div class="muted small">Ce code local est demandé au professeur lors de sa connexion.</div></div>`:''}`;
  }else{
-  body=`<div class="row"><div class="field"><label>Prénom</label><input id="first" value="${esc(obj.first||'')}"></div><div class="field"><label>Nom</label><input id="last" value="${esc(obj.last||'')}"></div></div><div class="row"><div class="field"><label>Date de naissance</label><input type="date" id="birthDate" value="${esc(obj.birthDate||'')}"></div><div class="field"><label>Régime</label><select id="regime"><option ${obj.regime==='Demi-pensionnaire'?'selected':''}>Demi-pensionnaire</option><option ${obj.regime==='Externe'?'selected':''}>Externe</option><option ${obj.regime==='Interne'?'selected':''}>Interne</option></select></div></div><div class="field"><label>Classe</label><select id="classId">${data.classes.filter(c=>!allowed||allowed.includes(c.id)).map(c=>`<option value="${c.id}" ${obj.classId===c.id?'selected':''}>${esc(schoolNameById(c.schoolId))} — ${esc(c.name)}</option>`).join('')}</select></div>`;
+  body=`<div class="row"><div class="field"><label>Prénom</label><input id="first" value="${esc(obj.first||'')}"></div><div class="field"><label>Nom</label><input id="last" value="${esc(obj.last||'')}"></div></div><div class="row" data-cp-contact-v259="student"><div class="field"><label>Adresse e-mail (facultatif)</label><input id="email" type="email" autocomplete="email" value="${esc(obj.email||'')}" placeholder="eleve@exemple.fr"></div><div class="field"><label>Numéro de téléphone (facultatif)</label><input id="phone" type="tel" autocomplete="tel" value="${esc(obj.phone||'')}" placeholder="06 00 00 00 00"></div></div><div class="row"><div class="field"><label>Date de naissance</label><input type="date" id="birthDate" value="${esc(obj.birthDate||'')}"></div><div class="field"><label>Régime</label><select id="regime"><option ${obj.regime==='Demi-pensionnaire'?'selected':''}>Demi-pensionnaire</option><option ${obj.regime==='Externe'?'selected':''}>Externe</option><option ${obj.regime==='Interne'?'selected':''}>Interne</option></select></div></div><div class="field"><label>Classe</label><select id="classId">${data.classes.filter(c=>!allowed||allowed.includes(c.id)).map(c=>`<option value="${c.id}" ${obj.classId===c.id?'selected':''}>${esc(schoolNameById(c.schoolId))} — ${esc(c.name)}</option>`).join('')}</select></div>`;
  }
 
  modal(`<div class="titlebar"><h2>${uid0?'Modifier':'Créer'}</h2><button class="btn close">Fermer</button></div>${body}<button class="btn primary" id="saveEntity">Enregistrer</button>`);
@@ -5531,6 +5532,17 @@ function editEntity(type,uid0,allowed){
    }else{
      x.first=document.getElementById('first').value;
      x.last=document.getElementById('last').value;
+     // data-cp-contact-v259 — champs facultatifs pour chaque profil.
+     const contactEmail=String(document.getElementById('email')?.value||'').trim();
+     const contactPhone=String(document.getElementById('phone')?.value||'').trim();
+     if(contactEmail&&(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)||contactEmail.length>254)){
+       return alert('Adresse e-mail incorrecte. Vérifie le format ou laisse le champ vide.');
+     }
+     if(contactPhone&&!/^[+0-9().\s-]{6,30}$/.test(contactPhone)){
+       return alert('Numéro de téléphone incorrect. Utilise 6 à 30 caractères : chiffres, espaces et + éventuel.');
+     }
+     x.email=contactEmail;
+     x.phone=contactPhone;
 
      if(type==='teacher'){
        const selectedSchoolId=document.getElementById('schoolId').value;
@@ -5544,7 +5556,6 @@ function editEntity(type,uid0,allowed){
          return alert('Choisissez un établissement existant.')
        }
 
-       x.email=document.getElementById('email').value;
        x.schoolId=selectedSchoolId;
        x.specialty=document.getElementById('teacherSpecialty').value;
 
