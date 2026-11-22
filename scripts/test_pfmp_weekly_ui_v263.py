@@ -22,6 +22,7 @@ window.studentApplicablePfmps=()=>[{id:'p1',startDate:'2026-11-23',endDate:'2026
 window.studentReferentialData=()=>({labels:{C1:'Préparer une réalisation'}});
 let entries=[{id:'e1',student_id:'student-test',pfmp_id:'p1',activity_date:'2026-11-24',activity_end_date:'2026-11-25',activity_text:'Soudage',validation_status:'pending',competency_codes:['C1']}];
 window.cpCloudListPfmpActivities=async()=>entries;
+window.cpCloudListPfmpActivityAssessments=async()=>[{activity_id:'e1',student_id:'student-test',pfmp_id:'p1',competency_code:'C1',mastery_level:'Acquis',grade:14}];
 window.cpCloudAddPfmpActivity=async()=>{};
 window.cpCloudUpdatePfmpActivity=async(id,start,text,end)=>{
  entries=entries.map(e=>e.id===id?{...e,activity_date:start,activity_end_date:end,activity_text:text}:e);
@@ -44,7 +45,7 @@ setTimeout(async()=>{
   assert(document.querySelector('.cp-diary-date-v250').hidden,'Old form still visible');
   assert(document.querySelectorAll('.cp-week-v262-edit').length===1,'Activity must appear once per week');
   assert(document.body.textContent.includes('14/20'),'Teacher grade missing');
-  assert(document.body.textContent.includes('Validation du tuteur : En attente'),'Tutor validation missing');
+  assert(document.body.textContent.includes('Validation du professeur : En attente'),'Tutor validation missing');
   document.querySelector('.cp-week-v262-edit').click();
   const field=document.querySelector('.cp-weekly-text-v258');
   assert(field.value==='Soudage','Edit not initialized');
