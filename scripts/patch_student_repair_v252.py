@@ -1,5 +1,5 @@
 from pathlib import Path
-import sys
+import sys,re
 p=Path(sys.argv[1])
 s=p.read_text(encoding="utf-8")
 marker="data-cp-student-repair-v252"
@@ -35,8 +35,9 @@ new="""function student(){
     return;
   }
   const s=data.students.find"""
-assert s.count(old)==1, "fonction student introuvable"
-s=s.replace(old,new,1)
+pattern=r"function student\\(\\)\\{\\s*const s=data\\.students\\.find"
+s,n=re.subn(pattern,lambda m:new,s,count=1)
+assert n==1, "fonction student introuvable"
 old="const allVisible=data.students.filter(s=>!s.archived&&(!filter||filter.includes(s.classId))&&(!academyClasses||academyClasses.has(s.classId)));"
 new="""const allVisible=data.students.filter(s=>(!filter||filter.includes(s.classId))&&(!academyClasses||academyClasses.has(s.classId)));
 // Les fiches archivées restent repérables pour pouvoir les réactiver sans perte.
