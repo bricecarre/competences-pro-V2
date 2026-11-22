@@ -52,23 +52,9 @@ old="${session.role==='teacher'?\u0060<button class=\"btn primary eval\" data-id
 new="${session.role==='teacher'&&!st.archived?\u0060<button class=\"btn primary eval\" data-id=\"${st.id}\">Évaluer</button><button class=\"btn bilanStudent\" data-id=\"${st.id}\">Bilan</button>\u0060:''}${st.archived?\u0060<button class=\"btn cp-v252-reactivate\" data-id=\"${st.id}\">Réactiver</button>\u0060:\u0060<button class=\"btn danger del\" data-id=\"${st.id}\">Archiver</button>\u0060}"
 assert s.count(old)==1, "actions élèves introuvables"
 s=s.replace(old,new,1)
-old="    bindCrud('student',filter);"
-new="""    bindCrud('student',filter);
-    document.querySelectorAll('.cp-v252-reactivate').forEach(b=>b.onclick=()=>{
-      if(!['admin','teacher'].includes(session?.role))return;
-      const student=data.students.find(x=>String(x.id)===String(b.dataset.id));
-      if(!student||!student.archived)return;
-      if(!confirm('Réactiver la fiche de '+name(student)+' ?'))return;
-      student.archived=false;
-      save();
-      render();
-    });"""
-assert s.count(old)>=1,"liaison listes élèves introuvable"
-s=s.replace(old,new,1)
-p.write_text(s,encoding='utf-8')
-print("V2.52 : séquences chargées pour élèves et fiches archivées réactivables")anchor="document.querySelectorAll('.eval').forEach"
+anchor="document.querySelectorAll('.eval').forEach"
 a=s.index("function listStudents(")
-b=s.find("\\nfunction ",a+10)
+b=s.find("\nfunction ",a+10)
 if b<0:b=len(s)
 part=s[a:b]
 assert anchor in part,"boutons d'évaluation de la liste introuvables"
