@@ -39,21 +39,35 @@ function currentPfmps(studentId){
  try{return studentApplicablePfmps(studentId)||[];}
  catch(_){return [];}
 }
+// V2.61 : l'ancien formulaire est composé de champs directement dans le conteneur,
+ // et non dans .cp-diary-form-v250 ; masquer aussi leurs libellés.
+function hideLegacyForm(wrapper){
+ const classes=['.cp-diary-date-v250','.cp-diary-end-date-v257','.cp-diary-text-v250'];
+ for(const selector of classes){
+  const field=wrapper.querySelector(selector);
+  if(!field)continue;
+  field.hidden=true;
+  field.style.display='none';
+  const label=field.previousElementSibling;
+  if(label&&label.tagName==='LABEL'){label.hidden=true;label.style.display='none';}
+ }
+ for(const selector of ['.cp-diary-save-v250','.cp-diary-add-v250','.cp-diary-form-v250','.cp-diary-info-v250']){
+  const element=wrapper.querySelector(selector);
+  if(element){element.hidden=true;element.style.display='none';}
+ }
+ for(const item of wrapper.children){
+  if(item.matches('p.muted.small')&&!item.classList.contains('cp-weekly-message-v258')){
+   item.hidden=true;item.style.display='none';
+  }
+ }
+}
 function renderOne(wrapper,entryPfmp){
  const old=wrapper.querySelector('.cp-weekly-v258');
  if(old)old.remove();
  const box=document.createElement('section');box.className='cp-weekly-v258';
  box.style.cssText='margin:12px 0;display:block;';
  wrapper.insertBefore(box,wrapper.querySelector('.cp-diary-list-v250'));
- // V2.60 : masquer la première partie de l'ancien carnet.
- // Les activités restent enregistrées et consultables dans la grille hebdomadaire.
- const originalAdd=wrapper.querySelector('.cp-diary-add-v250');
- const oldForm=wrapper.querySelector('.cp-diary-form-v250');
- const oldInfo=wrapper.querySelector('.cp-diary-info-v250');
- const oldIntro=[...wrapper.children].find(el=>el.matches('p.muted.small')&&!el.classList.contains('cp-diary-info-v250'));
- for(const el of [originalAdd,oldForm,oldInfo,oldIntro]){
-  if(el){el.hidden=true;el.style.display='none';}
- }
+ hideLegacyForm(wrapper);
  const originalList=wrapper.querySelector('.cp-diary-list-v250');
  if(originalList&&!wrapper.querySelector('.cp-weekly-old-details-v258')){
   const parent=originalList.parentNode;
@@ -181,6 +195,7 @@ function install(){
  const pfmps=currentPfmps(session.user);
  const byId=new Map(pfmps.map(p=>[String(p.id),p]));
  document.querySelectorAll('.cp-diary-entry-v250').forEach(wrapper=>{
+  hideLegacyForm(wrapper);
   if(wrapper.querySelector('.cp-weekly-v258'))return;
   const pfmp=byId.get(String(wrapper.dataset.pfmpId));
   if(pfmp)renderOne(wrapper,pfmp);
