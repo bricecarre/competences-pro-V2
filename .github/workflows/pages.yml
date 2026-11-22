@@ -126,6 +126,9 @@ jobs:
           print('V2.44: moteur de données en ligne et carte tactile validés')
           PY
           node --check /tmp/competences-pro-validation.js
+          python3 scripts/test_repeaters_v254.py site/index.html
+          node --check /tmp/cp-repeaters-v254-function.js
+          node /tmp/cp-repeaters-v254-test.cjs
       - name: Conserver également la bibliothèque Supabase dans le dépôt
         run: |
           set -euo pipefail
