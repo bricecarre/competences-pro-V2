@@ -45,9 +45,13 @@ jobs:
           python3 scripts/patch_student_repair_v252.py index.html
           python3 scripts/patch_teacher_school_scope_v253.py index.html
           python3 scripts/patch_repeaters_v254.py index.html
+          python3 scripts/patch_roster_recovery_v255.py index.html
           cp index.html site/index.html
           cp sauvegarde-en-ligne.html site/sauvegarde-en-ligne.html
           cp cloud-sync-v244.js site/cloud-sync-v244.js
+          cp roster-recovery-v255.js site/roster-recovery-v255.js
+          node --check site/roster-recovery-v255.js
+          grep -q "cpCloudGetClassRoster" site/cloud-sync-v244.js
           # Bibliothèque Supabase servie localement : aucun CDN externe nécessaire au démarrage.
           npm ci --no-audit --no-fund
           npm install --no-save --package-lock=false --no-audit --no-fund @supabase/supabase-js@2.57.0 esbuild@0.28.2
@@ -97,6 +101,7 @@ jobs:
           assert "data-cp-student-repair-v252" in s
           assert "data-cp-school-class-scope-v253" in s
           assert "data-cp-repeaters-v254" in s
+          assert '<script src="roster-recovery-v255.js"></script>' in s
           assert "cpRepairKnownRepeatersV254" in s
           assert "Léo Alvarez" in s and "Ilan Malidi" in s and "Samuel Poncet Lopez" in s
           assert "const allowed=data.classes.filter(c=>" in s
