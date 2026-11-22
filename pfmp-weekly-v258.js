@@ -17,46 +17,31 @@ const formatDate=value=>{
  const d=parseDate(value);
  return d?new Intl.DateTimeFormat('fr-FR',{day:'2-digit',month:'2-digit',timeZone:'UTC'}).format(d):value||'';
 };
-const status=e=>e.validation_status==='confirmed'?'Validée par le tuteur':e.validation_status==='correction_requested'?'Correction demandée':'En attente de validation du tuteur';
+const status=e=>e.validation_status==='confirmed'?'Validée par le professeur':e.validation_status==='correction_requested'?'Correction demandée':'En attente du professeur';
 // V2.62 : reprendre uniquement les évaluations PFMP déjà enregistrées par le professeur.
 // Le logiciel conserve des niveaux de maîtrise ; aucune note numérique n'est fabriquée.
 function teacherAssessments(studentId,pfmpId,entry){
- try{
-  const ref=typeof studentReferentialData==='function'?studentReferentialData(studentId):null;
-  const results=(typeof data!=='undefined'&&Array.isArray(data.pfmpResults)?data.pfmpResults:[])
-   .filter(r=>String(r.studentId)===String(studentId)&&String(r.pfmpId)===String(pfmpId)&&r.assessorType==='teacher'
-      &&r.status&&r.status!=='Non évalué');
-  const byCode=new Map(results.map(r=>[String(r.comp||''),r]));
-  const selected=Array.isArray(entry.competency_codes)?entry.competency_codes.map(String).filter(Boolean):[];
-  const codes=selected.length?selected:[...byCode.keys()].filter(Boolean);
-  const zone=document.createElement('div');
-  zone.style.cssText='margin-top:7px;padding-top:7px;border-top:1px solid var(--line,#9996);font-size:11px;';
-  const heading=document.createElement('div');
-  heading.style.cssText='font-weight:700;margin-bottom:4px;';
-  heading.textContent=selected.length?'Évaluation du professeur — compétences de l’activité':'Évaluation du professeur — PFMP';
-  zone.appendChild(heading);
-  if(!selected.length&&codes.length){
-   const hint=document.createElement('div');hint.className='muted small';
-   hint.textContent='Ces niveaux concernent la PFMP entière : les compétences ne sont pas encore liées à cette activité.';
-   zone.appendChild(hint);
-  }
-  if(!codes.length){
-   const pending=document.createElement('div');pending.className='muted small';
-   pending.textContent='Aucune compétence évaluée pour le moment.';
-   zone.appendChild(pending);
-   return zone;
-  }
-  for(const code of codes){
-   const result=byCode.get(code);
-   const item=document.createElement('div');
-   item.style.cssText='margin-top:4px;overflow-wrap:anywhere;';
-   const grade=result?.grade??result?.note;
-   const gradeLabel=grade!==undefined&&grade!==null&&String(grade)!==''?' · Note : '+String(grade)+'/20':'';
-   item.textContent=code+(ref?.labels?.[code]?' — '+ref.labels[code]:'')+' : '+(result?.status||'Non évaluée')+gradeLabel;
-   zone.appendChild(item);
-  }
-  return zone;
- }catch(_){const n=document.createElement('div');n.textContent='Évaluations PFMP momentanément indisponibles.';return n}
+ const box=document.createElement('div');
+ box.style.cssText='margin-top:8px;padding-top:8px;border-top:1px solid var(--line,#9996);font-size:12px;';
+ const title=document.createElement('strong');
+ title.textContent='Évaluation du professeur — cette activité';
+ box.appendChild(title);
+ const assessments=Array.isArray(entry.__activityAssessments)?entry.__activityAssessments:[];
+ if(!assessments.length){
+  const empty=document.createElement('div');empty.className='muted small';
+  empty.textContent='Aucune compétence évaluée pour cette activité.';
+  box.appendChild(empty);return box;
+ }
+ const ref=typeof studentReferentialData==='function'?studentReferentialData(studentId):null;
+ assessments.forEach(r=>{
+  const line=document.createElement('div');line.style.cssText='margin-top:5px;overflow-wrap:anywhere;';
+  const code=String(r.competency_code);
+  const grade=r.grade===null||r.grade===undefined?'':' · Note : '+Number(r.grade).toLocaleString('fr-FR',{maximumFractionDigits:2})+'/20';
+  line.textContent=code+(ref?.labels?.[code]?' — '+ref.labels[code]:'')
+   +' : '+String(r.mastery_level||'Non évaluée')+grade;
+  box.appendChild(line);
+ });
+ return box;
 }
 const studentContext=()=>typeof session!=='undefined'&&session?.role==='student'&&
  typeof studentApplicablePfmps==='function'&&typeof window.cpCloudListPfmpActivities==='function';
@@ -184,8 +169,19 @@ function renderOne(wrapper,entryPfmp){
  async function refresh(){
   cal.innerHTML='<p class="muted small">Chargement des activités…</p>';
   let entries;
-  try{entries=await window.cpCloudListPfmpActivities(session.user,String(entryPfmp.id));}
-  catch(e){cal.textContent='Activités indisponibles : '+String(e?.message||e);return}
+  try{
+   const [activities,assessments]=await Promise.all([
+    window.cpCloudListPfmpActivities(session.user,String(entryPfmp.id)),
+    window.cpCloudListPfmpActivityAssessments(session.user,String(entryPfmp.id))
+   ]);
+   const byActivity=new Map();
+   for(const a of assessments){
+    const key=String(a.activity_id);
+    if(!byActivity.has(key))byActivity.set(key,[]);
+    byActivity.get(key).push(a);
+   }
+   entries=activities.map(e=>({...e,__activityAssessments:byActivity.get(String(e.id))||[]}));
+  }catch(e){cal.textContent='Activités ou évaluations indisponibles : '+String(e?.message||e);return}
   if(!box.isConnected)return;
   cal.innerHTML='';
   weeks.forEach((week,index)=>{
@@ -226,7 +222,7 @@ function renderOne(wrapper,entryPfmp){
     card.appendChild(content);
     const validation=document.createElement('div');
     validation.style.cssText='margin-top:8px;font-weight:650;font-size:12px;';
-    validation.textContent='Validation du tuteur : '+status(e);
+    validation.textContent='Validation du professeur : '+status(e);
     card.appendChild(validation);
     if(e.tutor_comment){
      const comment=document.createElement('div');comment.style.marginTop='5px';
