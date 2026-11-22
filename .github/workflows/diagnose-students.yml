@@ -1,4 +1,4 @@
-name: Diagnostic archivage élèves (lecture seule)
+name: Diagnostic formulaire profils (lecture seule)
 on:
   push:
     paths: ['.github/workflows/diagnose-students.yml']
@@ -10,16 +10,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Examiner l'archivage sans afficher de données personnelles
+      - name: Examiner les formulaires d'identité
         run: |
           python3 - <<'PY'
           from pathlib import Path
           s=Path('index.html').read_text(encoding='utf-8')
-          for needle in ['function bindCrud(', 'function listStudents(', 'function save(', "if(type==='student')", "type==='student'", 'student.archived=true','st.archived=true', "cpRepairKnownRepeatersV254", 'function student(', 'function teacher(']:
+          for needle in ['function editEntity(', 'function editStudent(', 'function editTeacher(', 'function student(', 'function teacher(', 'function profile(', 'function editProfile(', 'function admin(', 'function name(']:
             p=s.find(needle)
-            print('CP_ARCHIVE_NEEDLE',repr(needle),'INDEX',p)
-            if p>=0:
-              snippet=s[max(0,p-500):p+7500]
-              for ln in snippet.splitlines():print('CP_CODE',ln[:600])
-              print('CP_ARCHIVE_END')
+            if p<0:continue
+            q=s.find('\nfunction ',p+12)
+            if q<0:q=min(len(s),p+18000)
+            content=s[p:min(q,p+23000)]
+            print('CP_PROFILE_START',needle,'LEN',len(content))
+            for line in content.splitlines():print('CP_CODE',line[:1100])
+            print('CP_PROFILE_END')
           PY
