@@ -51,6 +51,7 @@ jobs:
           python3 scripts/patch_pfmp_period_v257.py index.html
           python3 scripts/patch_archives_ui_v257.py index.html
           python3 scripts/patch_pfmp_weekly_v258.py index.html
+          python3 scripts/patch_profile_contacts_v259.py index.html
           cp index.html site/index.html
           cp sauvegarde-en-ligne.html site/sauvegarde-en-ligne.html
           cp cloud-sync-v244.js site/cloud-sync-v244.js
@@ -112,6 +113,9 @@ jobs:
           assert "data-cp-school-class-scope-v253" not in s
           assert "data-cp-teacher-assigned-only-v256" in s
           assert "data-cp-archive-safe-v257" in s
+          assert "data-cp-contact-v259" in s
+          assert 'id="phone" type="tel"' in s
+          assert 'id="email" type="email"' in s
           assert "data-cp-pfmp-period-v257" in s
           assert '<script src="pfmp-weekly-v258.js"></script>' in s
           assert '<script src="student-archives-v257.js"></script>' in s
