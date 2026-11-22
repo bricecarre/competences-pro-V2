@@ -4473,7 +4473,9 @@ function studentSequenceProgress(student){
 }
 function listStudents(filter){
  const academyClasses=session?.role==='admin'&&selectedAcademy?new Set(academyClassIds()):null;
- const allVisible=data.students.filter(s=>!s.archived&&(!filter||filter.includes(s.classId))&&(!academyClasses||academyClasses.has(s.classId)));
+ const allVisible=data.students.filter(s=>(!filter||filter.includes(s.classId))&&(!academyClasses||academyClasses.has(s.classId)));
+// Les fiches archivées restent repérables pour pouvoir les réactiver sans perte.
+
  let studentFilter='all';
 
  const studentClass=s=>data.classes.find(c=>c.id===s.classId);
@@ -4519,12 +4521,12 @@ function listStudents(filter){
                const classStudents=schoolStudents.filter(st=>st.classId===c.id);
                return `<div class="class-block"><h4>${esc(c.name)} <span class="muted small">· ${classStudents.length} élève(s) · ${esc(c.level)}</span></h4>
                  <div class="grid students">${classStudents.map(st=>`<div class="card">
-                   ${(()=>{const progress=studentSequenceProgress(st);return `<div class="student-name-progress"><b>${esc(name(st))}</b><span class="student-progress-badge" title="Progression globale · ${progress.done}/${progress.total} items uniques évalués">${progress.globalPct}% global</span></div><div class="student-progress-line" title="Progression globale · ${progress.done}/${progress.total} items uniques évalués"><span style="width:${progress.globalPct}%"></span></div><div class="muted small" style="margin-top:5px">${esc(pathLabelForReferential(refKey,progress.currentYear))} : <b>${progress.currentYearPct}%</b> · ${progress.currentYearDone}/${progress.currentYearTotal} items évalués</div>`})()}
+                   ${(()=>{const progress=studentSequenceProgress(st);return `<div class="student-name-progress"><b>${esc(name(st))}${st.archived?' · (archivé)':''}</b><span class="student-progress-badge" title="Progression globale · ${progress.done}/${progress.total} items uniques évalués">${progress.globalPct}% global</span></div><div class="student-progress-line" title="Progression globale · ${progress.done}/${progress.total} items uniques évalués"><span style="width:${progress.globalPct}%"></span></div><div class="muted small" style="margin-top:5px">${esc(pathLabelForReferential(refKey,progress.currentYear))} : <b>${progress.currentYearPct}%</b> · ${progress.currentYearDone}/${progress.currentYearTotal} items évalués</div>`})()}
                    <div class="school-badge">${esc(school.name)}</div>
                    <div class="muted small" style="margin-top:7px">${esc(pathLabelForReferential(refKey,year))} · ${esc(c.name)} · ${esc(referentialShortLabel(refKey))}</div>
                    <div class="student-meta-grid"><span>🎂 ${esc(st.birthDate||'Non renseignée')}</span><span>🍽️ ${esc(st.regime||'Non renseigné')}</span></div>
                    <p class="small muted">${(st.history||[]).join('<br>')}</p>
-                   <div class="actions"><button class="btn edit" data-id="${st.id}">Modifier</button>${session.role==='teacher'?`<button class="btn primary eval" data-id="${st.id}">Évaluer</button><button class="btn bilanStudent" data-id="${st.id}">Bilan</button>`:''}<button class="btn danger del" data-id="${st.id}">Archiver</button></div>
+                   <div class="actions"><button class="btn edit" data-id="${st.id}">Modifier</button>${session.role==='teacher'&&!st.archived?`<button class="btn primary eval" data-id="${st.id}">Évaluer</button><button class="btn bilanStudent" data-id="${st.id}">Bilan</button>`:''}${st.archived?`<button class="btn cp-v252-reactivate" data-id="${st.id}">Réactiver</button>`:`<button class="btn danger del" data-id="${st.id}">Archiver</button>`}</div>
                  </div>`).join('')}</div>
                </div>`
              }).join('')}`
@@ -4536,7 +4538,16 @@ function listStudents(filter){
    }).join('')+(!schools.length?'<div class="card muted">Aucun élève pour ce parcours.</div>':'');
 
    bindCrud('student',filter);
-   document.querySelectorAll('.eval').forEach(b=>b.onclick=()=>evalStudent(b.dataset.id));
+   document.querySelectorAll('.cp-v252-reactivate').forEach(b=>b.onclick=()=>{
+      if(!['admin','teacher'].includes(session?.role))return;
+      const student=data.students.find(x=>String(x.id)===String(b.dataset.id));
+      if(!student||!student.archived)return;
+      if(!confirm('Réactiver la fiche de '+name(student)+' ?'))return;
+      student.archived=false;
+      save();
+      render();
+    });
+    document.querySelectorAll('.eval').forEach(b=>b.onclick=()=>evalStudent(b.dataset.id));
    document.querySelectorAll('.bilanStudent').forEach(b=>b.onclick=()=>{explorerStudentId=b.dataset.id;section='studentdetail';render()})
  };
 
@@ -9950,7 +9961,33 @@ function studentNotesPage(){
 }
 
 function student(){
- const s=data.students.find(x=>x.id===session.user),r=data.results.filter(x=>x.student===s.id),ref=studentReferentialData(s.id),vals=ref.comps.map(c=>score(latestStatus(s.id,c)||'Non évalué')),acq=vals.filter(v=>v>=3).length,progressInfo=studentProgressDetails(s.id);
+  /* data-cp-student-repair-v252 */
+  // La vue élève n'avait pas de séquences au démarrage cloud (frise et progression à zéro).
+  if(!window.cpCloudSequencesReady?.()){
+    const requestedId=session?.user;
+    if(!window.cpStudentSequencesPending){
+      window.cpStudentSequencesPending=true;
+      window.cpStudentSequencesError='';
+      window.cpCloudEnsureSequences().then(sequences=>{
+        data.sequences=sequences;
+        window.cpStudentSequencesPending=false;
+        if(session?.role==='student'&&session.user===requestedId)render();
+      }).catch(error=>{
+        window.cpStudentSequencesPending=false;
+        window.cpStudentSequencesError=String(error?.message||error);
+        if(session?.role==='student'&&session.user===requestedId){
+          shell(title('Données pédagogiques indisponibles','La connexion aux séquences a échoué.')+
+            '<div class="card"><p id="cp-v252-error"></p><button class="btn primary" id="cp-v252-retry">Réessayer</button></div>');
+          document.getElementById('cp-v252-error').textContent=window.cpStudentSequencesError;
+          document.getElementById('cp-v252-retry').onclick=()=>{window.cpStudentSequencesError='';render()};
+        }
+      });
+    }
+    shell(title('Chargement de mon parcours','Les évaluations et les séquences sont en cours de synchronisation.')+
+      '<div class="card" role="status">Chargement des séquences pédagogiques… Elles sont nécessaires à la frise et à la progression.</div>');
+    return;
+  }
+  const s=data.students.find(x=>x.id===session.user),r=data.results.filter(x=>x.student===s.id),ref=studentReferentialData(s.id),vals=ref.comps.map(c=>score(latestStatus(s.id,c)||'Non évalué')),acq=vals.filter(v=>v>=3).length,progressInfo=studentProgressDetails(s.id);
  const radarVals=ref.comps.map(c=>studentRadarPartialScore(s.id,c)??0);
  const radarDetails=ref.comps.map(c=>{
    const avg=studentRadarPartialScore(s.id,c),status=latestStatus(s.id,c)||'Non évalué';
