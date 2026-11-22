@@ -7,8 +7,8 @@ if marker in s:
 a=s.index('function studentBilan(')
 b=s.index('\nfunction ',a+18)
 block=s[a:b]
-old="""  @@{classReferentialKey(c)===REFERENTIAL_BAC_TCI"""
-new="""  <section class="card" data-cp-annual-pfmp-report="teacher" data-student-id="@@{esc(s.id)}" style="margin-bottom:12px"><h2>PFMP — bilan annuel des activités</h2><p class="muted small">Chargement des compétences validées en entreprise…</p></section>
+old="""@@{classReferentialKey(c)===REFERENTIAL_BAC_TCI"""
+new="""<section class="card" data-cp-annual-pfmp-report="teacher" data-student-id="@@{esc(s.id)}" style="margin-bottom:12px"><h2>PFMP — bilan annuel des activités</h2><p class="muted small">Chargement des compétences validées en entreprise…</p></section>
   @@{classReferentialKey(c)===REFERENTIAL_BAC_TCI"""
 old=old.replace('@@{','$'+'{');new=new.replace('@@{','$'+'{')
 assert block.count(old)==1,'Bilan professeur : insertion avant unités certificatives introuvable'
@@ -17,9 +17,8 @@ s=s[:a]+block+s[b:]
 a=s.index('function student(){')
 b=s.index('\nfunction ',a+17)
 block=s[a:b]
-old='  </section>'+'@'+'+\n  schoolBanner(studentSchool,'
-new='  </section>'+'@'+'+\n  '+"""'<section class="card" data-cp-annual-pfmp-report="student" data-student-id="'+esc(s.id)+'" style="margin-bottom:12px"><h2>PFMP — bilan annuel des activités</h2><p class="muted small">Chargement des compétences validées en entreprise…</p></section>'+"""+'\n  schoolBanner(studentSchool,'
-old=old.replace('@',chr(96));new=new.replace('@',chr(96))
+old="schoolBanner(studentSchool,"
+new="""'<section class="card" data-cp-annual-pfmp-report="student" data-student-id="'+esc(s.id)+'" style="margin-bottom:12px"><h2>PFMP — bilan annuel des activités</h2><p class="muted small">Chargement des compétences validées en entreprise…</p></section>'+schoolBanner(studentSchool,"""
 assert block.count(old)==1,'Bilan élève : insertion après entête imprimable introuvable'
 block=block.replace(old,new,1)
 s=s[:a]+block+s[b:]
