@@ -1,8 +1,7 @@
-name: Diagnostic structure évaluation PFMP
+name: Diagnose intégration PFMP professeur
 on:
   push:
     paths: ['.github/workflows/diagnose-students.yml']
-  workflow_dispatch:
 permissions:
   contents: read
 jobs:
@@ -10,20 +9,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspection code local, sans données élèves
+      - name: Inspecter fonctions PFMP sans données personnelles
         run: |
           python3 - <<'PY'
           from pathlib import Path
           s=Path('index.html').read_text(encoding='utf-8')
-          for needle in ['function pfmpEvalStats(', 'function pfmpEvaluationStudentDetail(', 'function evaluatePfmp(', 'function studentApplicablePfmps(', 'function studentReferentialData(']:
+          for needle in ['function cpPfmpTeacherDiary(', 'function studentReferentialData(', 'function pfmpEvalResult(', 'function cpPfmpStudentDiary(']:
             p=s.find(needle)
-            if p<0:
-              print('MISSING',needle)
-              continue
-            end=s.find('\nfunction ',p+12)
-            if end<0:end=p+12000
-            piece=s[p:min(end,p+11000)]
-            print('CP_PFMP_FUNC',needle)
-            print(piece)
-            print('CP_END_FUNC')
+            print('FUNCTION',needle,'OFFSET',p)
+            if p>=0:
+              q=s.find('\\nfunction ',p+20)
+              if q<0:q=p+8500
+              print(s[p:min(q,p+8500)])
           PY
