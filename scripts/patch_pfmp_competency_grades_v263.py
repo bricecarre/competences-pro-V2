@@ -13,6 +13,7 @@ old="        @@{r?.assessorName?"
 new="""        @@{assessorType==='teacher'?'<label class="field" style="display:block;margin-top:7px">Note de la compétence /20 (facultative)<input type="number" class="cp-pfmp-grade-v263" data-comp="'+esc(comp)+'" min="0" max="20" step="0.5" inputmode="decimal" value="'+(r?.grade!==null&&r?.grade!==undefined?esc(String(r.grade)):'')+'" placeholder="Non notée" style="max-width:150px;display:block;padding:7px"></label>':''}
         @@{r?.assessorName?"""
 old=old.replace('@@{','$'+'{');new=new.replace('@@{','$'+'{')
+print('CP_GRADE_DIAG',len(block),'grade-anchor-count',block.count(old),'grade-title-index',block.find('pfmp-comp-row'),'assessor-index',block.find('r?.assessorName?'))
 assert block.count(old)==1,'Grade insertion point not found'
 block=block.replace(old,new,1)
 old="const x={pfmpId:p.id,pfmpTrainingYear:selectedYear,studentId,comp,status,assessorType,assessorName,teacherId:assessorType==='teacher'?session.user:null,date:new Date().toISOString().slice(0,10)};"
