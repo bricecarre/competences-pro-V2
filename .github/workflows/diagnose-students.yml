@@ -1,0 +1,51 @@
+name: Diagnostiquer archives élèves (lecture seule)
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/diagnose-students.yml'
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ouvrir la version historique (aucune écriture)
+        uses: actions/checkout@v4
+        with:
+          repository: bricecarre/Competence-PRO
+          path: old
+          persist-credentials: false
+      - name: Examiner les fiches historiques et les classes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,json
+          s=Path('old/index.html').read_text(encoding='utf-8')
+          print('ARCHIVE_SIZE',len(s))
+          for v in ['Yadine','Zoubeir','Clément','Saura','Gabriel','Sangouard','Alvarez','Malidi','Poncet','1TCI1','1 TCI 1']:
+            print('NAME_CHECK',v, len(re.findall(re.escape(v),s,re.I)))
+          x=s.find('const seed=')
+          print('SEED_POS',x)
+          if x<0: exit()
+          y=s.find('const DATA_STORAGE_KEY=',x)
+          print('SEED_CHARS',y-x)
+          frag=s[x+len('const seed='):y].strip()
+          if frag.endswith(';'):frag=frag[:-1]
+          try:
+            ob=json.loads(frag)
+            print('ARCHIVE_TOTALS',[(k,len(v)) for k,v in ob.items() if isinstance(v,list) and k in ('students','classes','evals','results')])
+            cls={c.get('id'):c for c in ob.get('classes',[])}
+            for c in ob.get('classes',[]):
+              if 'TCI' in str(c.get('name','')).upper():print('CLASS',c.get('id'),c.get('name'),c.get('level'),c.get('schoolId'))
+            for st in ob.get('students',[]):
+              full=' '.join(str(st.get(k,'')) for k in ('first','last','firstName','lastName','name'))
+              if re.search(r'alvarez|malidi|poncet|zoubeir|saura|sangouard',full,re.I):
+                c=cls.get(st.get('classId'),{})
+                print('STUDENT',st.get('id'),repr(full), 'CLASS',st.get('classId'),c.get('name'),'ARCHIVED',st.get('archived'),'HISTORY',st.get('history'))
+          except Exception as e:
+            print('PARSE_ERROR',type(e).__name__,str(e)[:400])
+            for v in ['Zoubeir','Saura','Sangouard','Alvarez']:
+              p=s.lower().find(v.lower())
+              if p>=0: print('CONTEXT',v,repr(s[max(0,p-250):p+250]))
+          PY
