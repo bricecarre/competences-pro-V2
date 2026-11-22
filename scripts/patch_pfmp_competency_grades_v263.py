@@ -9,7 +9,7 @@ a=s.index('function evaluatePfmp(')
 b=s.find('\nfunction ',a+15)
 if b<0:b=len(s)
 block=s[a:b]
-old="        @@{r?.assessorName?"
+old="@@{r?.assessorName?"
 new="""        @@{assessorType==='teacher'?'<label class="field" style="display:block;margin-top:7px">Note de la compétence /20 (facultative)<input type="number" class="cp-pfmp-grade-v263" data-comp="'+esc(comp)+'" min="0" max="20" step="0.5" inputmode="decimal" value="'+(r?.grade!==null&&r?.grade!==undefined?esc(String(r.grade)):'')+'" placeholder="Non notée" style="max-width:150px;display:block;padding:7px"></label>':''}
         @@{r?.assessorName?"""
 old=old.replace('@@{','$'+'{');new=new.replace('@@{','$'+'{')
