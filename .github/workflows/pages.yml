@@ -54,6 +54,7 @@ jobs:
           python3 scripts/patch_profile_contacts_v259.py index.html
           python3 scripts/patch_pfmp_competency_grades_v263.py index.html
           python3 scripts/patch_pfmp_teacher_activity_v265.py index.html
+          python3 scripts/patch_pfmp_stage_summary_v266.py index.html
           cp index.html site/index.html
           cp sauvegarde-en-ligne.html site/sauvegarde-en-ligne.html
           cp cloud-sync-v244.js site/cloud-sync-v244.js
@@ -128,6 +129,8 @@ jobs:
           assert "data-cp-contact-v259" in s
           assert "data-cp-pfmp-grade-v263" in s
           assert "data-cp-pfmp-activity-eval-v265" in s
+          assert "data-cp-stage-summary-v266" in s
+          assert '<div id="pfmpEvalZone" style="display:none"' in s
           assert "cp-pfmp-grade-v263" in s
           assert 'id="phone" type="tel"' in s
           assert 'id="email" type="email"' in s
