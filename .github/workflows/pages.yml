@@ -44,6 +44,7 @@ jobs:
           python3 scripts/patch_pfmp_journal_v250.py index.html
           python3 scripts/patch_student_repair_v252.py index.html
           python3 scripts/patch_teacher_school_scope_v253.py index.html
+          python3 scripts/patch_repeaters_v254.py index.html
           cp index.html site/index.html
           cp sauvegarde-en-ligne.html site/sauvegarde-en-ligne.html
           cp cloud-sync-v244.js site/cloud-sync-v244.js
@@ -95,6 +96,9 @@ jobs:
           assert "data-cp-lazy-v248" in s
           assert "data-cp-student-repair-v252" in s
           assert "data-cp-school-class-scope-v253" in s
+          assert "data-cp-repeaters-v254" in s
+          assert "cpRepairKnownRepeatersV254" in s
+          assert "Léo Alvarez" in s and "Ilan Malidi" in s and "Samuel Poncet Lopez" in s
           assert "const allowed=data.classes.filter(c=>" in s
           assert "(t.schoolId&&String(c.schoolId)===String(t.schoolId))" in s
           assert "cpCloudEnsureSequences" in s
