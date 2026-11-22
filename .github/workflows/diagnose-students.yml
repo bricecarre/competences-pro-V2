@@ -1,4 +1,4 @@
-name: Inspect annual student report code
+name: Inspect student annual report implementation
 on:
   push:
     paths: ['.github/workflows/diagnose-students.yml']
@@ -9,19 +9,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Find annual report and assessment aggregation
+      - name: Inspect annual student report code only
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
           s=Path('index.html').read_text(encoding='utf-8')
-          terms=['function bilan','function annual','function studentReport','function competencyAverageScore','function pfmpCompetencyStatuses','bilan annuel','Bilan annuel','Bilan de l','bilanStudent','annualMean','function studentProgress']
-          for t in terms:
-            ms=list(re.finditer(re.escape(t),s,re.I))
-            print('CP_ANNUAL_TERM',t,'COUNT',len(ms))
-            for m in ms[:9]:
-              p=m.start()
-              print('CP_ANNUAL_EXCERPT',t,repr(s[max(0,p-320):min(len(s),p+800)]))
-          for m in re.finditer(r'function\s+([\w]*[Bb]ilan[\w]*|[\w]*[Aa]nnual[\w]*|[\w]*[Pp]rogress[\w]*)\s*\(',s):
-            print('CP_ANNUAL_FUN',m.group(1),'OFFSET',m.start())
+          for needle in ['function studentBilan(', 'function studentDetail(', 'function studentFormationProgressHtml(', 'function pfmpCompetencyStatuses(', 'function competencyCoverage(', 'function studentPfmpForYear(']:
+            a=s.find(needle)
+            b=s.find('\\nfunction ',a+15)
+            if b<0:b=len(s)
+            print('CP_BLOCK_START',needle,'LENGTH',b-a)
+            if a>=0:
+              piece=s[a:min(b,a+25000)]
+              print(piece)
+              print('CP_BLOCK_END')
           PY
