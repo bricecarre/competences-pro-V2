@@ -118,13 +118,18 @@ jobs:
           print('V2.44: moteur de données en ligne et carte tactile validés')
           PY
           node --check /tmp/competences-pro-validation.js
-      - name: Conserver la version corrigée dans le dépôt
+      - name: Conserver également la bibliothèque Supabase dans le dépôt
         run: |
-          if ! git diff --quiet -- index.html; then
+          set -euo pipefail
+          # GitHub Pages peut aussi publier le contenu de la branche principale.
+          # Chaque mode de publication doit donc disposer du même client JS.
+          cp site/supabase-client.js supabase-client.js
+          cmp -s site/supabase-client.js supabase-client.js
+          git add -f index.html supabase-client.js
+          if ! git diff --cached --quiet; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add index.html
-            git commit -m "Publier V2.52 : frise et restauration élèves archivés"
+            git commit -m "Fix: conserver le client Supabase dans tous les déploiements Pages"
             git push origin HEAD:main
           fi
       - name: Configurer GitHub Pages
@@ -152,6 +157,9 @@ jobs:
             sleep 5
           done
           test -s /tmp/supabase-site.js
+          node --check /tmp/supabase-site.js
+          # La présence d'un simple HTML 200 ne suffit pas : tester le module JS.
+          grep -q 'createClient' /tmp/supabase-site.js
           command -v google-chrome
           timeout 55s google-chrome --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=18000 --dump-dom "$SITE_URL" > /tmp/cp-dom.html 2>/tmp/cp-browser.log || {
             tail -60 /tmp/cp-browser.log
