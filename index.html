@@ -7023,7 +7023,8 @@ function evaluatePfmp(pfmpId,schoolId,trainingYear,classId=null,initialStudentId
      return `<div class="pfmp-comp-row">
        <div class="pfmp-comp-title"><b class="accent">${comp}</b><span>${esc(ref.labels[comp]||'')}</span>${statusPill(r?.status||'Non évalué')}</div>
        <div class="status-scale">${STATUS.map(st=>`<button class="status-choice ${normalizeStatus(r?.status)===st?'active':''}" style="background:${statusColor(st)}" data-comp="${comp}" data-st="${st}">${STATUS_SHORT[st]}</button>`).join('')}</div>
-       ${r?.assessorName?`<div class="muted small" style="margin-top:6px">Dernière saisie : ${esc(r.assessorName)} · ${r.date||''}</div>`:''}
+               ${assessorType==='teacher'?'<label class="field" style="display:block;margin-top:7px">Note de la compétence /20 (facultative)<input type="number" class="cp-pfmp-grade-v263" data-comp="'+esc(comp)+'" min="0" max="20" step="0.5" inputmode="decimal" value="'+(r?.grade!==null&&r?.grade!==undefined?esc(String(r.grade)):'')+'" placeholder="Non notée" style="max-width:150px;display:block;padding:7px"></label>':''}
+        ${r?.assessorName?`<div class="muted small" style="margin-top:6px">Dernière saisie : ${esc(r.assessorName)} · ${r.date||''}</div>`:''}
      </div>`
    }).join('')}</div>`;
 
@@ -7032,10 +7033,28 @@ function evaluatePfmp(pfmpId,schoolId,trainingYear,classId=null,initialStudentId
      const comp=b.dataset.comp,status=b.dataset.st;
      const assessorName=document.getElementById('pfmpAssessorName').value.trim()||(assessorType==='teacher'?name(data.teachers.find(t=>t.id===session.user)):'Tuteur entreprise');
      const old=pfmpEvalResult(p.id,studentId,comp,assessorType);
-     const x={pfmpId:p.id,pfmpTrainingYear:selectedYear,studentId,comp,status,assessorType,assessorName,teacherId:assessorType==='teacher'?session.user:null,date:new Date().toISOString().slice(0,10)};
+     const x={...old,pfmpId:p.id,pfmpTrainingYear:selectedYear,studentId,comp,status,assessorType,assessorName,teacherId:assessorType==='teacher'?session.user:null,date:new Date().toISOString().slice(0,10)};
      data.pfmpResults=old?data.pfmpResults.map(r=>r===old?x:r):[...data.pfmpResults,x];
      save();draw()
    })
+    // data-cp-pfmp-grade-v263 : note facultative /20 distincte du niveau de maîtrise.
+    document.querySelectorAll('.cp-pfmp-grade-v263').forEach(input=>input.onchange=()=>{
+      if(session?.role!=='teacher'||assessorType!=='teacher')return;
+      const raw=input.value.trim().replace(',','.');
+      const grade=raw===''?null:Number(raw);
+      if(grade!==null&&(!Number.isFinite(grade)||grade<0||grade>20)){
+        alert('La note doit être comprise entre 0 et 20.');draw();return;
+      }
+      const comp=input.dataset.comp;
+      const old=pfmpEvalResult(p.id,studentId,comp,'teacher');
+      if(!old&&grade===null)return;
+      const assessorName=document.getElementById('pfmpAssessorName').value.trim()||name(data.teachers.find(t=>t.id===session.user));
+      const x={...old,pfmpId:p.id,pfmpTrainingYear:selectedYear,studentId,comp,
+        status:old?.status||'Non évalué',grade,assessorType:'teacher',assessorName,teacherId:session.user,date:new Date().toISOString().slice(0,10)};
+      data.pfmpResults=old?data.pfmpResults.map(r=>r===old?x:r):[...data.pfmpResults,x];
+      save();draw();
+    });
+
  };
 
  document.querySelectorAll('.assessorTab').forEach(b=>b.onclick=()=>{
