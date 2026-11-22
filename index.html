@@ -4551,7 +4551,7 @@ function listStudents(filter){
    document.querySelectorAll('.bilanStudent').forEach(b=>b.onclick=()=>{explorerStudentId=b.dataset.id;section='studentdetail';render()})
  };
 
- shell(title(filter?'Mes élèves':'Élèves','Les élèves sont séparés entre Bac Pro TCI et CAP RICS.',`<button class="btn primary" id="add">Ajouter un élève</button>`)+
+ shell(title(filter?'Mes élèves':'Élèves','Élèves des classes accessibles dans l’établissement, en Bac Pro TCI et CAP RICS.',`<button class="btn primary" id="add">Ajouter un élève</button>`)+
  `<div class="year-filter-tabs">${filterDefs.map(([key,label])=>`<button class="btn ${key==='all'?'active':''} studentPathTab" data-path="${key}">${esc(label)} <span class="year-filter-count">${countFor(key)}</span></button>`).join('')}</div>
  <div class="year-filter-summary" id="studentFilterSummary"></div><div id="studentListZone"></div>`);
 
@@ -7970,7 +7970,17 @@ function teacherNotesPage(allowedClassIds){
 }
 
 function teacher(){
- const t=data.teachers.find(x=>x.id===session.user),allowed=data.classes.filter(c=>c.teachers.includes(t.id)).map(c=>c.id),schoolIds=[...new Set(data.classes.filter(c=>allowed.includes(c.id)).map(c=>c.schoolId))];
+ const t=data.teachers.find(x=>x.id===session.user);
+  if(!t){shell(title('Profil professeur introuvable','Reconnexion nécessaire.'));return}
+  // data-cp-school-class-scope-v253
+  // La liste de classes du professeur peut être incomplète dans un export ancien.
+  // Montrer toutes les classes de SON établissement, y compris Bac Pro,
+  // sans modifier les élèves, leurs évaluations ou les affectations enregistrées.
+  const allowed=data.classes.filter(c=>
+    (t.schoolId&&String(c.schoolId)===String(t.schoolId))||
+    (Array.isArray(c.teachers)&&c.teachers.includes(t.id))
+  ).map(c=>c.id);
+  const schoolIds=[...new Set(data.classes.filter(c=>allowed.includes(c.id)).map(c=>c.schoolId))];
  if(section==='dashboard'){
    const mainSchool=data.schools.find(s=>s.id===t.schoolId)||data.schools.find(s=>schoolIds.includes(s.id));
    shell(title(
